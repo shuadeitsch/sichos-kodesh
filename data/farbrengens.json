@@ -1,0 +1,159 @@
+{
+  "front": [
+    {
+      "id": "cover",
+      "title": "שער",
+      "label": "שער",
+      "start": 1,
+      "end": 1,
+      "printStart": null,
+      "printEnd": null
+    },
+    {
+      "id": "petach-davar",
+      "title": "פתח דבר",
+      "label": "פתח דבר",
+      "start": 5,
+      "end": 6,
+      "printStart": "III",
+      "printEnd": null
+    },
+    {
+      "id": "title",
+      "title": "שער פנימי",
+      "label": "שער פנימי",
+      "start": 7,
+      "end": 7,
+      "printStart": null,
+      "printEnd": null
+    },
+    {
+      "id": "mafteiach",
+      "title": "מפתח",
+      "label": "מפתח",
+      "start": 8,
+      "end": 9,
+      "printStart": "3",
+      "printEnd": "4"
+    },
+    {
+      "id": "mafteiach-inyanim",
+      "title": "מפתח ענינים",
+      "label": "מפתח ענינים",
+      "start": 10,
+      "end": 14,
+      "printStart": "5",
+      "printEnd": "9"
+    }
+  ],
+  "farbrengens": [
+    {
+      "id": "p16",
+      "title": "י\"ד שבט, ה'שי\"ת",
+      "label": "י\"ד שבט",
+      "start": 16,
+      "end": 21,
+      "printStart": "א",
+      "printEnd": "ו"
+    },
+    {
+      "id": "p22",
+      "title": "קטע משיחת ש\"פ יתרו, מבה\"ח אדר, ה'שי\"ת",
+      "label": "יתרו",
+      "start": 22,
+      "end": 22,
+      "printStart": "ז",
+      "printEnd": "ז"
+    },
+    {
+      "id": "p23",
+      "title": "ש\"פ ויק\"פ, מבה\"ח ניסן, ה'שי\"ת",
+      "label": "ויק\"פ",
+      "start": 23,
+      "end": 24,
+      "printStart": "ח",
+      "printEnd": "ט"
+    },
+    {
+      "id": "p25",
+      "title": "אחרון של פסח, השי\"ת",
+      "label": "אחש\"פ",
+      "start": 25,
+      "end": 27,
+      "printStart": "יו\"ד",
+      "printEnd": "יב"
+    },
+    {
+      "id": "p28",
+      "title": "ש\"פ שמיני, מבה\"ח אייר, ה'שי\"ת",
+      "label": "שמיני",
+      "start": 28,
+      "end": 32,
+      "printStart": "יג",
+      "printEnd": "יז"
+    },
+    {
+      "id": "p33",
+      "title": "ר\"ד ליל ב' אייר, ה'שי\"ת",
+      "label": "ליל ב' אייר",
+      "start": 33,
+      "end": 36,
+      "printStart": "חי",
+      "printEnd": "כא"
+    },
+    {
+      "id": "p37",
+      "title": "פסח שני, ה'שי\"ת",
+      "label": "פסח שני",
+      "start": 37,
+      "end": 39,
+      "printStart": "כב",
+      "printEnd": "כד"
+    },
+    {
+      "id": "p40",
+      "title": "ל\"ג בעומר, ה'שי\"ת",
+      "label": "ל\"ג בעומר",
+      "start": 40,
+      "end": 47,
+      "printStart": "כה",
+      "printEnd": "לב"
+    },
+    {
+      "id": "p48",
+      "title": "שיחת ש\"פ בהר בחוקותי, מבה\"ח סיון, ה'שי\"ת",
+      "label": "בה\"ב",
+      "start": 48,
+      "end": 50,
+      "printStart": "לג",
+      "printEnd": "לה"
+    },
+    {
+      "id": "p51",
+      "title": "שיחת ר\"ח סיון, ה'שי\"ת",
+      "label": "ר\"ח סיון",
+      "start": 51,
+      "end": 54,
+      "printStart": "לו",
+      "printEnd": "לט"
+    },
+    {
+      "id": "p55",
+      "title": "קטע משיחת יום ב' דחג השבועות, ה'שי\"ת",
+      "label": "יום ב' דחגה\"ש",
+      "start": 55,
+      "end": 84,
+      "printStart": "מ",
+      "printEnd": "סט"
+    },
+    {
+      "id": "p85",
+      "title": "ר\"ד מהתוועדות דיום כ' מנ\"א, ה'שי\"ת",
+      "label": "כ' מנ\"א",
+      "start": 85,
+      "end": 85,
+      "printStart": "ע",
+      "printEnd": "ע"
+    }
+  ]
+}
