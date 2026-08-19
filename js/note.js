@@ -16,11 +16,13 @@
     subject = "Sichos Kodesh — page " + p;
     where.hidden = false;
     where.innerHTML =
-      "You were reading page " +
+      "You were on page " +
       p +
       ". <a href=\"/read/?p=" +
       encodeURIComponent(p) +
-      "\">Return to the leaf</a>.";
+      "\">Back to page " +
+      p +
+      "</a>.";
     back.href = "/read/?p=" + encodeURIComponent(p);
   } else {
     where.hidden = true;

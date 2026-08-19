@@ -3,12 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#EBE4D6">
+  <meta name="theme-color" content="#FBF8F2">
   <meta name="description" content="Read Sichos Kodesh volume 1 — original print or retype.">
   <title>שיחות קודש · reader</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&amp;family=Miriam+Libre:wght@400;700&amp;family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&amp;display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;700&amp;family=Source+Sans+3:wght@400;600&amp;display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/site.css">
 </head>
 <body class="reader">
@@ -27,8 +27,10 @@
         <input id="page-input" type="number" min="1" inputmode="numeric" aria-label="Page">
         <span class="bar-print" id="bar-print" lang="he"></span>
         <button type="button" class="step" id="next" aria-label="Next page">›</button>
-        <button type="button" class="bar-ctl bar-note-ctl" id="open-download">Download</button>
-        <button type="button" class="bar-ctl bar-note-ctl" id="open-note">A note</button>
+      </div>
+      <div class="bar-tools">
+        <button type="button" class="bar-ctl" id="open-download">Download</button>
+        <button type="button" class="bar-ctl" id="open-note">Note</button>
       </div>
     </div>
     <button type="button" class="farbrengen-line" id="farbrengen-line" lang="he" aria-controls="contents"></button>
@@ -55,7 +57,7 @@
   <div class="sheet" id="note-sheet" hidden>
     <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="sheet-heading">
       <p class="sheet-kicker" id="sheet-kicker"></p>
-      <h2 id="sheet-heading" class="sheet-heading">A note</h2>
+      <h2 id="sheet-heading" class="sheet-heading">Note</h2>
       <p class="sheet-quote" id="sheet-quote" lang="he" dir="rtl" hidden></p>
       <div class="sheet-ink" id="sheet-ink" hidden>
         <canvas id="sheet-canvas" hidden></canvas>

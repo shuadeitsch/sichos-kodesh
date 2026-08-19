@@ -248,7 +248,7 @@
   function updateFarbrengenLine(page) {
     var g = groupForPage(page.n);
     var title = "";
-    if (g) title = g.label || g.title || "";
+    if (g) title = g.title || g.label || "";
     else if (page.sicha) title = page.sicha;
     farbrengenLine.textContent = title;
   }
@@ -302,7 +302,7 @@
       var quiet = document.createElement("p");
       quiet.className = "quiet";
       quiet.lang = "en";
-      quiet.textContent = "This leaf has no retype.";
+      quiet.textContent = "No retype for this page.";
       stage.appendChild(quiet);
     } else {
       var article = document.createElement("article");
@@ -943,7 +943,7 @@
     .catch(function () {
       var quiet = document.createElement("p");
       quiet.className = "quiet";
-      quiet.textContent = "The sefer could not be opened.";
+      quiet.textContent = "The pages could not be loaded.";
       stage.replaceChildren(quiet);
     });
 })();
