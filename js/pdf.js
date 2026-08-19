@@ -512,8 +512,8 @@
 
   function styleFor(kind, base) {
     var size = base;
-    var leading = base * 1.82;
-    var gap = base * 0.62;
+    var leading = base * 1.72;
+    var gap = base * 0.5;
     var color = INK;
     var align = "start";
     if (kind === "display") {
@@ -722,7 +722,7 @@
     var w = fonts.regular.widthOfTextAtSize(vis, size);
     page.drawText(vis, {
       x: (width - w) / 2,
-      y: height - 34,
+      y: height - 32,
       size: size,
       font: fonts.regular,
       color: rgb(MUTE)
@@ -921,10 +921,10 @@
     var box = opts.box || {
       left: 64,
       width: w - 128,
-      top: h - 56,
-      height: h - 56 - 58
+      top: h - 50,
+      height: h - 50 - 50
     };
-    var base = opts.base || 12.6;
+    var base = opts.base || 12.35;
     var page = pdf.addPage([w, h]);
     paintPaper(page, w, h);
     drawFolio(page, fonts, rec.print, w, h);
