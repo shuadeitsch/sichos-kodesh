@@ -3,9 +3,9 @@
 
   var LETTER = { width: 612, height: 792 };
   var PAPER = [251 / 255, 248 / 255, 242 / 255];
-  var INK = [17 / 255, 17 / 255, 17 / 255];
-  var MUTE = [90 / 255, 88 / 255, 84 / 255];
-  var HAIRLINE = [200 / 255, 196 / 255, 188 / 255];
+  var INK = [28 / 255, 25 / 255, 22 / 255];
+  var MUTE = [111 / 255, 103 / 255, 92 / 255];
+  var HAIRLINE = [201 / 255, 189 / 255, 168 / 255];
   var COLOPHON = "הנחה בלתי מוגה";
   var FONT_REGULAR = "/fonts/MiriamLibre-Static-Regular.ttf";
   var FONT_BOLD = "/fonts/MiriamLibre-Static-Bold.ttf";

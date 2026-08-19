@@ -218,14 +218,9 @@ body.home {
 
 .bar-page {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.12rem;
-}
-
-.bar-tools {
-  display: flex;
-  align-items: baseline;
-  gap: 0.85rem;
   margin-inline-start: auto;
 }
 
@@ -314,6 +309,10 @@ body.home {
   font-family: var(--sefer);
   font-size: 0.95rem;
   color: var(--ink);
+}
+
+.bar-note-ctl {
+  margin-inline-start: 0.75rem;
 }
 
 /* ------------------------------------------------------------------ */
@@ -782,7 +781,7 @@ body.note {
 }
 
 /* ------------------------------------------------------------------ */
-/* Note / download slip                                                 */
+/* Note sheet and download sheet                                        */
 /* ------------------------------------------------------------------ */
 
 .sheet {
@@ -792,8 +791,8 @@ body.note {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1.15rem;
-  background: rgba(17, 17, 17, 0.14);
+  padding: 1.5rem;
+  background: var(--page);
 }
 
 .sheet[hidden] {
@@ -802,11 +801,11 @@ body.note {
 
 .sheet-panel {
   width: min(32rem, 100%);
-  max-height: calc(100vh - 2.3rem);
+  max-height: calc(100vh - 3rem);
   overflow: auto;
   background: var(--page);
-  border: 1px solid var(--ink);
-  padding: 1.1rem 1.15rem 1.05rem;
+  border: 1px solid var(--rule);
+  padding: 1.65rem 1.6rem 1.45rem;
 }
 
 .sheet-kicker {
@@ -841,7 +840,7 @@ body.note {
 .sheet-ink {
   margin: 0 0 0.95rem;
   border: 1px solid var(--rule);
-  background: #fff;
+  background: var(--page);
 }
 
 .sheet-ink canvas,
@@ -864,21 +863,22 @@ body.note {
 .sheet-panel textarea {
   display: block;
   width: 100%;
-  min-height: 6.8rem;
+  min-height: 7.25rem;
   margin: 0;
-  padding: 0.4rem 0.45rem;
-  background: #fff;
-  border: 1px solid var(--rule);
+  padding: 0.35rem 0 0.5rem;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--rule);
   font-family: var(--ui);
-  font-size: 1rem;
-  line-height: 1.45;
+  font-size: 1.05rem;
+  line-height: 1.55;
   color: var(--ink);
   resize: vertical;
 }
 
 .sheet-panel textarea:focus {
   outline: none;
-  border-color: var(--mark);
+  border-bottom-color: var(--mark);
 }
 
 .sheet-actions {
@@ -957,12 +957,13 @@ body.note {
   display: block;
   width: 100%;
   margin: 0.1rem 0 0;
-  padding: 0.22rem 0.15rem 0.32rem;
-  background: #fff;
-  border: 1px solid var(--rule);
+  padding: 0.28rem 0 0.42rem;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--rule);
   font-family: var(--type);
-  font-size: 1rem;
-  line-height: 1.45;
+  font-size: 1.02rem;
+  line-height: 1.5;
   color: var(--ink);
   direction: rtl;
   text-align: start;
@@ -970,7 +971,7 @@ body.note {
 
 .sheet-select:focus {
   outline: none;
-  border-color: var(--mark);
+  border-bottom-color: var(--mark);
 }
 
 .sheet-select:disabled {
@@ -994,14 +995,14 @@ body.note {
 }
 
 .sheet-range input {
-  width: 2.6rem;
-  background: #fff;
+  width: 2.7rem;
+  background: transparent;
   border: 0;
   border-bottom: 1px solid var(--rule);
-  padding: 0.08rem 0 0.1rem;
+  padding: 0.1rem 0 0.12rem;
   text-align: center;
   font-family: var(--ui);
-  font-size: 0.9rem;
+  font-size: 0.98rem;
   color: var(--ink);
   -moz-appearance: textfield;
   appearance: textfield;
@@ -1048,15 +1049,13 @@ body.note {
     gap: 0.7rem;
   }
 
-  .bar-tools {
-    margin-inline-start: auto;
-    order: 1;
+  .bar-page {
+    margin-inline-start: 0;
+    flex: 1 1 100%;
   }
 
-  .bar-page,
-  .bar-view {
-    order: 2;
-    flex: 0 0 auto;
+  .bar-note-ctl {
+    margin-inline-start: 0.55rem;
   }
 
   .leaf {
