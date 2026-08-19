@@ -40,6 +40,28 @@
   var sheetText = document.getElementById("sheet-text");
   var sheetSend = document.getElementById("sheet-send");
   var sheetClose = document.getElementById("sheet-close");
+  var openDownloadBtn = document.getElementById("open-download");
+  var downloadSheet = document.getElementById("download-sheet");
+  var downloadKicker = document.getElementById("download-kicker");
+  var downloadKindBtns = [
+    document.getElementById("download-kind-original"),
+    document.getElementById("download-kind-retype"),
+    document.getElementById("download-kind-side")
+  ];
+  var downloadModeGroupBtn = document.getElementById("download-mode-group");
+  var downloadModePagesBtn = document.getElementById("download-mode-pages");
+  var downloadModeGroupWrap = document.getElementById("download-mode-group-wrap");
+  var downloadModePagesWrap = document.getElementById("download-mode-pages-wrap");
+  var downloadGroup = document.getElementById("download-group");
+  var downloadFrom = document.getElementById("download-from");
+  var downloadTo = document.getElementById("download-to");
+  var downloadStatus = document.getElementById("download-status");
+  var downloadError = document.getElementById("download-error");
+  var downloadGo = document.getElementById("download-go");
+  var downloadClose = document.getElementById("download-close");
+  var downloadKind = DEFAULT_VIEW;
+  var downloadMode = "group";
+  var downloadBusy = false;
 
   var noteCtx = null;
   var holdTimer = null;
@@ -124,7 +146,7 @@
   }
 
   function overlayOpen() {
-    return !contentsEl.hidden || !noteSheet.hidden;
+    return !contentsEl.hidden || !noteSheet.hidden || !downloadSheet.hidden;
   }
 
   function setOverlay(el, open) {
@@ -148,9 +170,27 @@
     lastFocus = null;
   }
 
+  function closeDownload() {
+    if (downloadBusy && window.SichosPdf && typeof window.SichosPdf.abort === "function") {
+      window.SichosPdf.abort();
+    }
+    setOverlay(downloadSheet, false);
+    downloadBusy = false;
+    downloadGo.disabled = false;
+    downloadStatus.hidden = true;
+    downloadStatus.textContent = "";
+    if (lastFocus && typeof lastFocus.focus === "function") {
+      try {
+        lastFocus.focus();
+      } catch (e) {}
+    }
+    lastFocus = null;
+  }
+
   function closeAllOverlays() {
     closeContents();
     closeNote();
+    closeDownload();
   }
 
   function fillContents() {
@@ -198,6 +238,7 @@
       return;
     }
     closeNote();
+    closeDownload();
     fillContents();
     setOverlay(contentsEl, true);
     openContentsBtn.setAttribute("aria-expanded", "true");
@@ -397,11 +438,191 @@
     img.src = "/" + page.scan;
   }
 
+  function groupById(id) {
+    var list = allGroups();
+    var i;
+    for (i = 0; i < list.length; i++) {
+      if (list[i].id === id) return list[i];
+    }
+    return null;
+  }
+
+  function selectedDownloadGroup() {
+    return groupById(downloadGroup.value);
+  }
+
+  function fillDownloadGroups() {
+    downloadGroup.replaceChildren();
+    var list = allGroups();
+    var i;
+    for (i = 0; i < list.length; i++) {
+      var g = list[i];
+      var opt = document.createElement("option");
+      opt.value = g.id;
+      var name = g.title || g.label || g.id;
+      var pr = printRange(g);
+      opt.textContent = pr ? name + "  ·  " + pr : name;
+      downloadGroup.appendChild(opt);
+    }
+  }
+
+  function setDownloadKind(kind) {
+    downloadKind = kind === "original" || kind === "side-by-side" ? kind : "retype";
+    var i;
+    for (i = 0; i < downloadKindBtns.length; i++) {
+      var btn = downloadKindBtns[i];
+      if (!btn) continue;
+      var on = btn.getAttribute("data-kind") === downloadKind;
+      btn.classList.toggle("is-active", on);
+      btn.setAttribute("aria-pressed", on ? "true" : "false");
+    }
+  }
+
+  function applyGroupRange(g, fromCurrent) {
+    if (!g) return;
+    downloadFrom.value = String(fromCurrent ? current : g.start);
+    downloadTo.value = String(g.end);
+  }
+
+  function setDownloadMode(mode) {
+    downloadMode = mode === "pages" ? "pages" : "group";
+    var groupOn = downloadMode === "group";
+    downloadModeGroupWrap.classList.toggle("is-on", groupOn);
+    downloadModeGroupWrap.classList.toggle("is-off", !groupOn);
+    downloadModePagesWrap.classList.toggle("is-on", !groupOn);
+    downloadModePagesWrap.classList.toggle("is-off", groupOn);
+    downloadModeGroupBtn.setAttribute("aria-pressed", groupOn ? "true" : "false");
+    downloadModePagesBtn.setAttribute("aria-pressed", groupOn ? "false" : "true");
+    downloadGroup.disabled = !groupOn;
+    downloadFrom.disabled = groupOn;
+    downloadTo.disabled = groupOn;
+  }
+
+  function downloadRange() {
+    var from;
+    var to;
+    if (downloadMode === "group") {
+      var g = selectedDownloadGroup();
+      if (g) {
+        from = g.start;
+        to = g.end;
+      } else {
+        from = current;
+        to = current;
+      }
+    } else {
+      from = parseInt(downloadFrom.value, 10);
+      to = parseInt(downloadTo.value, 10);
+    }
+    if (!Number.isFinite(from)) from = current;
+    if (!Number.isFinite(to)) to = from;
+    from = clamp(from);
+    to = clamp(to);
+    if (to < from) {
+      var swap = from;
+      from = to;
+      to = swap;
+    }
+    return { from: from, to: to };
+  }
+
+  function pagesInRange(from, to) {
+    var out = [];
+    var n;
+    for (n = from; n <= to; n++) {
+      if (byN[n]) out.push(byN[n]);
+    }
+    return out;
+  }
+
+  function setDownloadMessage(el, text) {
+    if (!text) {
+      el.hidden = true;
+      el.textContent = "";
+      return;
+    }
+    el.hidden = false;
+    el.textContent = text;
+  }
+
+  function openDownloadSheet() {
+    closeContents();
+    closeNote();
+    lastFocus = document.activeElement;
+    fillDownloadGroups();
+    setDownloadKind(view);
+    var g = groupForPage(current);
+    if (g) {
+      downloadGroup.value = g.id;
+      applyGroupRange(g, true);
+      setDownloadMode("group");
+    } else {
+      if (downloadGroup.options.length) downloadGroup.selectedIndex = 0;
+      downloadFrom.value = String(current);
+      downloadTo.value = String(current);
+      setDownloadMode("pages");
+    }
+    downloadKicker.textContent = pageMetaLine(byN[current] || { n: current });
+    downloadFrom.min = String(minN);
+    downloadFrom.max = String(maxN);
+    downloadTo.min = String(minN);
+    downloadTo.max = String(maxN);
+    setDownloadMessage(downloadStatus, "");
+    setDownloadMessage(downloadError, "");
+    downloadBusy = false;
+    downloadGo.disabled = false;
+    setOverlay(downloadSheet, true);
+    if (window.SichosPdf && typeof window.SichosPdf.load === "function") {
+      window.SichosPdf.load().catch(function () {});
+    }
+    downloadGo.focus();
+  }
+
+  function runDownload() {
+    if (downloadBusy) return;
+    if (!window.SichosPdf || typeof window.SichosPdf.generate !== "function") {
+      setDownloadMessage(downloadError, "The PDF tools could not be opened.");
+      return;
+    }
+    var range = downloadRange();
+    var g = downloadMode === "group" ? selectedDownloadGroup() : null;
+    var list = pagesInRange(range.from, range.to);
+    downloadBusy = true;
+    downloadGo.disabled = true;
+    setDownloadMessage(downloadError, "");
+    setDownloadMessage(downloadStatus, "Setting the pages…");
+    window.SichosPdf.generate({
+      kind: downloadKind,
+      pages: list,
+      from: range.from,
+      to: range.to,
+      groupId: g && g.id,
+      useGroup: downloadMode === "group" && !!(g && g.id),
+      onStatus: function (msg) {
+        setDownloadMessage(downloadStatus, msg);
+      }
+    })
+      .then(function () {
+        setDownloadMessage(downloadStatus, "");
+      })
+      .catch(function (err) {
+        if (err && err.aborted) return;
+        var msg = (err && err.message) || "The PDF could not be set.";
+        setDownloadMessage(downloadError, msg);
+        setDownloadMessage(downloadStatus, "");
+      })
+      .then(function () {
+        downloadBusy = false;
+        downloadGo.disabled = false;
+      });
+  }
+
   function openNoteSheet(opts) {
     opts = opts || {};
     var page = byN[current];
     if (!page) return;
     closeContents();
+    closeDownload();
     lastFocus = document.activeElement;
     noteCtx = {
       page: page,
@@ -538,6 +759,40 @@
       if (e.target === noteSheet) closeNote();
     });
 
+    openDownloadBtn.addEventListener("click", function () {
+      if (!downloadSheet.hidden) {
+        closeDownload();
+        return;
+      }
+      openDownloadSheet();
+    });
+    downloadClose.addEventListener("click", closeDownload);
+    downloadGo.addEventListener("click", runDownload);
+    downloadSheet.addEventListener("click", function (e) {
+      if (e.target === downloadSheet) closeDownload();
+    });
+    var ki;
+    for (ki = 0; ki < downloadKindBtns.length; ki++) {
+      (function (btn) {
+        if (!btn) return;
+        btn.addEventListener("click", function () {
+          setDownloadKind(btn.getAttribute("data-kind"));
+        });
+      })(downloadKindBtns[ki]);
+    }
+    downloadModeGroupBtn.addEventListener("click", function () {
+      var g = selectedDownloadGroup();
+      if (g) applyGroupRange(g, false);
+      setDownloadMode("group");
+    });
+    downloadModePagesBtn.addEventListener("click", function () {
+      setDownloadMode("pages");
+    });
+    downloadGroup.addEventListener("change", function () {
+      var g = selectedDownloadGroup();
+      if (g) applyGroupRange(g, false);
+    });
+
     stage.addEventListener("pointerdown", function (e) {
       if (overlayOpen()) return;
       if (e.pointerType === "mouse" && e.button !== 0) return;
@@ -590,6 +845,11 @@
     document.addEventListener("keydown", function (e) {
       var tag = (e.target && e.target.tagName) || "";
       if (e.key === "Escape") {
+        if (!downloadSheet.hidden) {
+          e.preventDefault();
+          closeDownload();
+          return;
+        }
         if (!noteSheet.hidden) {
           e.preventDefault();
           closeNote();
@@ -601,7 +861,7 @@
           return;
         }
       }
-      if (tag === "INPUT" || tag === "TEXTAREA") return;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
       if (e.altKey || e.ctrlKey || e.metaKey) return;
       if (overlayOpen()) return;
       var k = e.key;
@@ -640,6 +900,14 @@
     if (vParam) view = normalizeView(vParam);
     else if (stored && stored.view) view = normalizeView(stored.view);
     else view = DEFAULT_VIEW;
+    if (params.get("download") === "1" || params.get("download") === "pdf") {
+      window.setTimeout(function () {
+        openDownloadSheet();
+        var url = new URL(location.href);
+        url.searchParams.delete("download");
+        history.replaceState({ p: current, view: view }, "", url.pathname + url.search);
+      }, 0);
+    }
   }
 
   bind();

@@ -27,6 +27,7 @@
         <input id="page-input" type="number" min="1" inputmode="numeric" aria-label="Page">
         <span class="bar-print" id="bar-print" lang="he"></span>
         <button type="button" class="step" id="next" aria-label="Next page">›</button>
+        <button type="button" class="bar-ctl bar-note-ctl" id="open-download">Download</button>
         <button type="button" class="bar-ctl bar-note-ctl" id="open-note">A note</button>
       </div>
     </div>
@@ -69,6 +70,42 @@
     </div>
   </div>
 
+  <div class="sheet" id="download-sheet" hidden>
+    <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="download-heading">
+      <p class="sheet-kicker" id="download-kicker"></p>
+      <h2 id="download-heading" class="sheet-heading">Download</h2>
+
+      <p class="sheet-label" id="download-kind-label">Kind</p>
+      <div class="sheet-choices" role="radiogroup" aria-labelledby="download-kind-label">
+        <button type="button" class="sheet-choice" id="download-kind-original" data-kind="original" aria-pressed="false">Original</button>
+        <button type="button" class="sheet-choice" id="download-kind-retype" data-kind="retype" aria-pressed="false">Retype</button>
+        <button type="button" class="sheet-choice" id="download-kind-side" data-kind="side-by-side" aria-pressed="false">Side by side</button>
+      </div>
+
+      <p class="sheet-label">Which pages</p>
+      <div class="sheet-mode is-on" id="download-mode-group-wrap">
+        <button type="button" class="sheet-mode-btn" id="download-mode-group" aria-pressed="true">This farbrengen / this section</button>
+        <select class="sheet-select" id="download-group" lang="he" dir="rtl" aria-label="Farbrengen or section"></select>
+      </div>
+      <div class="sheet-mode" id="download-mode-pages-wrap">
+        <button type="button" class="sheet-mode-btn" id="download-mode-pages" aria-pressed="false">Pages</button>
+        <div class="sheet-range">
+          <label for="download-from">from <input id="download-from" type="number" min="1" inputmode="numeric"></label>
+          <label for="download-to">to <input id="download-to" type="number" min="1" inputmode="numeric"></label>
+        </div>
+      </div>
+
+      <p class="sheet-status" id="download-status" hidden></p>
+      <p class="sheet-error" id="download-error" hidden></p>
+
+      <div class="sheet-actions">
+        <button type="button" id="download-go">Download</button>
+        <button type="button" id="download-close">Close</button>
+      </div>
+    </div>
+  </div>
+
   <script src="/js/reader.js" defer></script>
+  <script src="/js/pdf.js" defer></script>
 </body>
 </html>
