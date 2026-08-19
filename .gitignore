@@ -3,3 +3,10 @@ preview-*.png
 .env
 .env.*
 *.log
+.vercel
+preview-*.png
+.env
+.env.*
+*.log
+__pycache__/
+*.pyc
