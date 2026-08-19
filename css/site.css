@@ -147,9 +147,11 @@ body.home {
 
 .cover .links {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
   margin-top: 2.85rem;
+  row-gap: 0.85rem;
 }
 
 .cover .links a {
@@ -680,6 +682,11 @@ body.note {
     font-size: 2.8rem;
   }
 
+  .cover .links {
+    flex-wrap: wrap;
+    row-gap: 1rem;
+  }
+
   .contents-panel {
     width: 100%;
     border-inline: 0;
@@ -990,7 +997,149 @@ body.note {
   color: var(--ink);
 }
 
-#sheet-send {
+#sheet-send,
+#download-go {
   color: var(--ink);
   border-bottom-color: var(--accent);
+}
+
+#download-go:disabled {
+  color: var(--hairline);
+  cursor: default;
+  border-bottom-color: transparent;
+}
+
+.sheet-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.35rem;
+  margin: 0 0 1.55rem;
+}
+
+.sheet-choice {
+  padding: 0 0 0.18rem;
+  border-bottom: 1px solid transparent;
+  font-family: Newsreader, serif;
+  font-style: italic;
+  font-size: 1.02rem;
+  color: var(--mute);
+}
+
+.sheet-choice.is-active {
+  color: var(--ink);
+  border-bottom-color: var(--accent);
+}
+
+.sheet-mode {
+  margin: 0 0 1.15rem;
+}
+
+.sheet-mode.is-off {
+  opacity: 0.48;
+}
+
+.sheet-mode-btn {
+  display: block;
+  margin-bottom: 0.4rem;
+  padding: 0 0 0.12rem;
+  border-bottom: 1px solid transparent;
+  font-family: Newsreader, serif;
+  font-style: italic;
+  font-size: 0.98rem;
+  color: var(--mute);
+  text-align: start;
+}
+
+.sheet-mode.is-on .sheet-mode-btn {
+  color: var(--ink);
+  border-bottom-color: var(--accent);
+}
+
+.sheet-select {
+  display: block;
+  width: 100%;
+  margin: 0.1rem 0 0;
+  padding: 0.28rem 0 0.42rem;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--hairline);
+  border-radius: 0;
+  font-family: "Miriam Libre Local", "Miriam Libre", serif;
+  font-size: 1.02rem;
+  line-height: 1.5;
+  color: var(--ink);
+  direction: rtl;
+  text-align: start;
+}
+
+.sheet-select:focus {
+  outline: none;
+  border-bottom-color: var(--accent);
+}
+
+.sheet-select:disabled {
+  color: var(--mute);
+}
+
+.sheet-range {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 1.35rem;
+  margin-top: 0.2rem;
+  font-family: Newsreader, serif;
+  font-style: italic;
+  font-size: 0.98rem;
+  color: var(--mute);
+}
+
+.sheet-range label {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+
+.sheet-range input {
+  width: 2.7rem;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--hairline);
+  border-radius: 0;
+  padding: 0.1rem 0 0.12rem;
+  text-align: center;
+  font-family: Newsreader, serif;
+  font-style: normal;
+  font-size: 0.98rem;
+  color: var(--ink);
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.sheet-range input::-webkit-outer-spin-button,
+.sheet-range input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.sheet-range input:focus {
+  outline: none;
+  border-bottom-color: var(--accent);
+}
+
+.sheet-range input:disabled {
+  color: var(--mute);
+  border-bottom-color: transparent;
+}
+
+.sheet-status,
+.sheet-error {
+  margin: 0.15rem 0 0;
+  font-family: Newsreader, serif;
+  font-style: italic;
+  font-size: 0.95rem;
+  color: var(--mute);
+}
+
+.sheet-error {
+  color: var(--accent);
 }
