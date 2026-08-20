@@ -370,6 +370,17 @@ body.reader.is-both .chrome {
   z-index: 8;
 }
 
+body.reader.is-both .stage,
+body.reader.is-both .both,
+body.reader.is-both .both-leaf,
+body.reader.is-both .both-leaf * {
+  touch-action: pan-y;
+}
+
+body.reader.is-peeking {
+  overflow: hidden;
+}
+
 .both-ink {
   position: sticky;
   top: var(--chrome-h, 5.4rem);
@@ -385,8 +396,12 @@ body.reader.is-both .chrome {
   overflow: hidden;
   background: var(--page);
   border-bottom: 1px solid var(--rule);
-  touch-action: manipulation;
+  touch-action: pan-y;
   user-select: none;
+}
+
+.both-ink.is-zoomed {
+  touch-action: none;
 }
 
 .both-ink-canvas {
@@ -394,6 +409,7 @@ body.reader.is-both .chrome {
   width: 100%;
   height: 100%;
   object-fit: contain;
+  transform-origin: center center;
 }
 
 .both-leaf .quiet {
@@ -409,6 +425,10 @@ body.reader.is-both .chrome {
   justify-content: center;
   padding: 2.4rem 0.75rem 1rem;
   background: var(--page);
+  overflow: hidden;
+  touch-action: none;
+  overscroll-behavior: none;
+  user-select: none;
 }
 
 .both-peek[hidden] {
@@ -422,14 +442,28 @@ body.reader.is-both .chrome {
   width: auto;
   height: auto;
   object-fit: contain;
+  transform-origin: center center;
+  -webkit-user-drag: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.both-peek.is-zoomed img {
+  cursor: grab;
+}
+
+.both-peek.is-zoomed img:active {
+  cursor: grabbing;
 }
 
 .both-peek-close {
   position: absolute;
   top: 0.55rem;
   inset-inline-end: 0.9rem;
+  z-index: 2;
   font-size: 0.82rem;
   color: var(--mute);
+  touch-action: manipulation;
 }
 
 .both-peek-close:hover {

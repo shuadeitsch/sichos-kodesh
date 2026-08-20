@@ -78,6 +78,13 @@
   var bothIndex = -1;
   var bothObserver = null;
   var bothRaf = 0;
+  var peekZoom = null;
+  var inkZoom = null;
+  var ZOOM_MIN = 1;
+  var ZOOM_MAX = 5;
+  var ZOOM_TOGGLE = 2.5;
+  var DOUBLE_TAP_MS = 400;
+  var DOUBLE_TAP_PX = 28;
 
   var noteCtx = null;
   var holdTimer = null;
@@ -546,6 +553,7 @@
   function showBothBand(index) {
     if (index === bothIndex && bothCanvas && bothCanvas.width) return;
     bothIndex = index;
+    if (inkZoom) inkZoom.reset();
     paintCurrentBand();
   }
 
@@ -574,6 +582,7 @@
 
   function scheduleBothPick() {
     if (view !== "both") return;
+    if (bothPeek && !bothPeek.hidden) return;
     if (bothRaf) return;
     bothRaf = window.requestAnimationFrame(function () {
       bothRaf = 0;
@@ -606,12 +615,16 @@
       window.cancelAnimationFrame(bothRaf);
       bothRaf = 0;
     }
+    if (inkZoom) {
+      inkZoom.destroy();
+      inkZoom = null;
+    }
+    closeBothPeek();
     bothInkBtn = null;
     bothCanvas = null;
     bothScanImg = null;
     bothParas = [];
     bothIndex = -1;
-    closeBothPeek();
   }
 
   function startBothFollow(page) {
@@ -639,7 +652,391 @@
       if (view !== "both" || current !== page.n) return;
       if (bothInkBtn) bothInkBtn.hidden = true;
     };
+    if (bothInkBtn && bothCanvas) {
+      inkZoom = attachPanZoom({
+        surface: bothInkBtn,
+        target: bothCanvas,
+        container: bothInkBtn,
+        passScrollAtOne: true,
+        wheel: false,
+        doubleTap: false,
+        zoomedClass: "is-zoomed"
+      });
+    }
     img.src = "/" + page.scan;
+  }
+
+  function dist2(x1, y1, x2, y2) {
+    var dx = x1 - x2;
+    var dy = y1 - y2;
+    return dx * dx + dy * dy;
+  }
+
+  function attachPanZoom(opts) {
+    var surface = opts.surface;
+    var target = opts.target;
+    var container = opts.container || surface;
+    var minScale = opts.minScale || ZOOM_MIN;
+    var maxScale = opts.maxScale || ZOOM_MAX;
+    var toggleScale = opts.toggleScale || ZOOM_TOGGLE;
+    var st = { scale: 1, x: 0, y: 0 };
+    var gestureFlag = false;
+    var pointers = {};
+    var pointerIds = [];
+    var lastDist = 0;
+    var lastMidX = 0;
+    var lastMidY = 0;
+    var lastX = 0;
+    var lastY = 0;
+    var moved = false;
+    var startX = 0;
+    var startY = 0;
+    var lastTapAt = 0;
+    var lastTapX = 0;
+    var lastTapY = 0;
+    var mouseOn = false;
+    var onTarget = false;
+    var destroyed = false;
+    var touchOpt = { passive: false };
+
+    function apply() {
+      if (st.scale === 1 && st.x === 0 && st.y === 0) {
+        target.style.transform = "";
+      } else {
+        target.style.transform =
+          "translate(" + st.x + "px, " + st.y + "px) scale(" + st.scale + ")";
+      }
+      if (opts.zoomedClass) {
+        surface.classList.toggle(opts.zoomedClass, st.scale > 1.001);
+      }
+    }
+
+    function reset() {
+      st.scale = 1;
+      st.x = 0;
+      st.y = 0;
+      pointers = {};
+      pointerIds = [];
+      mouseOn = false;
+      moved = false;
+      onTarget = false;
+      apply();
+    }
+
+    function box() {
+      var r = target.getBoundingClientRect();
+      var s = st.scale || 1;
+      return {
+        w: r.width / s,
+        h: r.height / s,
+        cx: r.left + r.width / 2 - st.x,
+        cy: r.top + r.height / 2 - st.y
+      };
+    }
+
+    function clampPan() {
+      var c = container.getBoundingClientRect();
+      var b = box();
+      var visW = b.w * st.scale;
+      var visH = b.h * st.scale;
+      var maxX = Math.max(0, (visW - c.width) / 2);
+      var maxY = Math.max(0, (visH - c.height) / 2);
+      if (st.x > maxX) st.x = maxX;
+      if (st.x < -maxX) st.x = -maxX;
+      if (st.y > maxY) st.y = maxY;
+      if (st.y < -maxY) st.y = -maxY;
+    }
+
+    function zoomAt(px, py, next) {
+      if (next < minScale) next = minScale;
+      if (next > maxScale) next = maxScale;
+      var b = box();
+      var cx = b.cx + st.x;
+      var cy = b.cy + st.y;
+      var ox = st.scale ? (px - cx) / st.scale : 0;
+      var oy = st.scale ? (py - cy) / st.scale : 0;
+      st.x = st.x + ox * (st.scale - next);
+      st.y = st.y + oy * (st.scale - next);
+      st.scale = next;
+      if (st.scale <= 1.001) {
+        st.scale = 1;
+        st.x = 0;
+        st.y = 0;
+      } else {
+        clampPan();
+      }
+      apply();
+    }
+
+    function ignore(e) {
+      if (!opts.ignoreSelector) return false;
+      var t = e.target;
+      if (!t || !t.closest) return false;
+      return !!t.closest(opts.ignoreSelector);
+    }
+
+    function markOnTarget(e) {
+      onTarget = !!(e.target && (e.target === target || (target.contains && target.contains(e.target))));
+    }
+
+    function addPtr(id, x, y) {
+      if (pointers[id]) {
+        pointers[id].x = x;
+        pointers[id].y = y;
+        return;
+      }
+      pointers[id] = { x: x, y: y };
+      pointerIds.push(id);
+    }
+
+    function updatePtr(id, x, y) {
+      if (!pointers[id]) return;
+      pointers[id].x = x;
+      pointers[id].y = y;
+    }
+
+    function removePtr(id) {
+      if (!pointers[id]) return;
+      delete pointers[id];
+      var i = pointerIds.indexOf(id);
+      if (i >= 0) pointerIds.splice(i, 1);
+    }
+
+    function pinchPts() {
+      return { a: pointers[pointerIds[0]], b: pointers[pointerIds[1]] };
+    }
+
+    function beginPinch() {
+      var p = pinchPts();
+      if (!p.a || !p.b) return;
+      var dx = p.a.x - p.b.x;
+      var dy = p.a.y - p.b.y;
+      lastDist = Math.sqrt(dx * dx + dy * dy) || 1;
+      lastMidX = (p.a.x + p.b.x) / 2;
+      lastMidY = (p.a.y + p.b.y) / 2;
+    }
+
+    function movePinch() {
+      var p = pinchPts();
+      if (!p.a || !p.b) return;
+      var dx = p.a.x - p.b.x;
+      var dy = p.a.y - p.b.y;
+      var dist = Math.sqrt(dx * dx + dy * dy) || 1;
+      var mx = (p.a.x + p.b.x) / 2;
+      var my = (p.a.y + p.b.y) / 2;
+      zoomAt(lastMidX, lastMidY, st.scale * (dist / lastDist));
+      st.x += mx - lastMidX;
+      st.y += my - lastMidY;
+      if (st.scale > 1.001) clampPan();
+      apply();
+      lastDist = dist;
+      lastMidX = mx;
+      lastMidY = my;
+      gestureFlag = true;
+      moved = true;
+    }
+
+    function maybeDoubleTap(x, y, onEl) {
+      if (!opts.doubleTap) return;
+      if (opts.doubleTapEl) {
+        if (onEl !== opts.doubleTapEl && !(opts.doubleTapEl.contains && opts.doubleTapEl.contains(onEl))) {
+          return;
+        }
+      }
+      var now = Date.now();
+      if (
+        now - lastTapAt < DOUBLE_TAP_MS &&
+        dist2(x, y, lastTapX, lastTapY) < DOUBLE_TAP_PX * DOUBLE_TAP_PX
+      ) {
+        lastTapAt = 0;
+        if (st.scale > 1.05) zoomAt(x, y, minScale);
+        else zoomAt(x, y, toggleScale);
+        gestureFlag = true;
+      } else {
+        lastTapAt = now;
+        lastTapX = x;
+        lastTapY = y;
+      }
+    }
+
+    function onTouchStart(e) {
+      if (destroyed) return;
+      if (ignore(e)) return;
+      markOnTarget(e);
+      var i;
+      for (i = 0; i < e.changedTouches.length; i++) {
+        var t = e.changedTouches[i];
+        addPtr("t" + t.identifier, t.clientX, t.clientY);
+      }
+      if (pointerIds.length === 1) {
+        var p = pointers[pointerIds[0]];
+        lastX = p.x;
+        lastY = p.y;
+        startX = p.x;
+        startY = p.y;
+        moved = false;
+        gestureFlag = false;
+      }
+      if (pointerIds.length >= 2) {
+        e.preventDefault();
+        beginPinch();
+        gestureFlag = true;
+      }
+    }
+
+    function onTouchMove(e) {
+      if (destroyed) return;
+      var i;
+      for (i = 0; i < e.changedTouches.length; i++) {
+        var t = e.changedTouches[i];
+        updatePtr("t" + t.identifier, t.clientX, t.clientY);
+      }
+      if (pointerIds.length >= 2) {
+        e.preventDefault();
+        movePinch();
+        return;
+      }
+      if (pointerIds.length !== 1) return;
+      var p = pointers[pointerIds[0]];
+      if (dist2(p.x, p.y, startX, startY) > MOVE_PX * MOVE_PX) moved = true;
+      if (st.scale > 1.001) {
+        e.preventDefault();
+        st.x += p.x - lastX;
+        st.y += p.y - lastY;
+        clampPan();
+        apply();
+        lastX = p.x;
+        lastY = p.y;
+        gestureFlag = true;
+      } else if (!opts.passScrollAtOne) {
+        e.preventDefault();
+        if (moved) gestureFlag = true;
+      } else if (moved) {
+        gestureFlag = true;
+      }
+    }
+
+    function onTouchEnd(e) {
+      if (destroyed) return;
+      var i;
+      var ended = [];
+      for (i = 0; i < e.changedTouches.length; i++) {
+        ended.push(e.changedTouches[i]);
+        removePtr("t" + e.changedTouches[i].identifier);
+      }
+      if (pointerIds.length >= 2) {
+        beginPinch();
+      } else if (pointerIds.length === 1) {
+        var p = pointers[pointerIds[0]];
+        lastX = p.x;
+        lastY = p.y;
+        startX = p.x;
+        startY = p.y;
+      } else if (ended.length === 1 && !moved) {
+        maybeDoubleTap(ended[0].clientX, ended[0].clientY, onTarget ? target : e.target);
+      }
+    }
+
+    function onPointerDown(e) {
+      if (destroyed) return;
+      if (e.pointerType === "touch") return;
+      if (e.button !== 0) return;
+      if (ignore(e)) return;
+      markOnTarget(e);
+      mouseOn = true;
+      moved = false;
+      gestureFlag = false;
+      startX = e.clientX;
+      startY = e.clientY;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      if (st.scale > 1.001) e.preventDefault();
+    }
+
+    function onPointerMove(e) {
+      if (destroyed) return;
+      if (!mouseOn) return;
+      if (e.pointerType === "touch") return;
+      if (dist2(e.clientX, e.clientY, startX, startY) > MOVE_PX * MOVE_PX) moved = true;
+      if (st.scale > 1.001) {
+        e.preventDefault();
+        st.x += e.clientX - lastX;
+        st.y += e.clientY - lastY;
+        clampPan();
+        apply();
+        lastX = e.clientX;
+        lastY = e.clientY;
+        gestureFlag = true;
+      } else if (moved && !opts.passScrollAtOne) {
+        gestureFlag = true;
+      }
+    }
+
+    function onPointerUp(e) {
+      if (destroyed) return;
+      if (e.pointerType === "touch") return;
+      if (!mouseOn) return;
+      mouseOn = false;
+      if (moved) gestureFlag = true;
+      else maybeDoubleTap(e.clientX, e.clientY, onTarget ? target : e.target);
+    }
+
+    function onWheel(e) {
+      if (destroyed) return;
+      if (!opts.wheel) return;
+      e.preventDefault();
+      var factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
+      zoomAt(e.clientX, e.clientY, st.scale * factor);
+      gestureFlag = true;
+    }
+
+    function onGesture(e) {
+      e.preventDefault();
+    }
+
+    surface.addEventListener("touchstart", onTouchStart, touchOpt);
+    surface.addEventListener("touchmove", onTouchMove, touchOpt);
+    surface.addEventListener("touchend", onTouchEnd);
+    surface.addEventListener("touchcancel", onTouchEnd);
+    surface.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("pointermove", onPointerMove);
+    document.addEventListener("pointerup", onPointerUp);
+    document.addEventListener("pointercancel", onPointerUp);
+    if (opts.wheel) surface.addEventListener("wheel", onWheel, touchOpt);
+    surface.addEventListener("gesturestart", onGesture);
+    surface.addEventListener("gesturechange", onGesture);
+    surface.addEventListener("gestureend", onGesture);
+
+    return {
+      reset: reset,
+      destroy: function () {
+        destroyed = true;
+        mouseOn = false;
+        surface.removeEventListener("touchstart", onTouchStart, touchOpt);
+        surface.removeEventListener("touchmove", onTouchMove, touchOpt);
+        surface.removeEventListener("touchend", onTouchEnd);
+        surface.removeEventListener("touchcancel", onTouchEnd);
+        surface.removeEventListener("pointerdown", onPointerDown);
+        document.removeEventListener("pointermove", onPointerMove);
+        document.removeEventListener("pointerup", onPointerUp);
+        document.removeEventListener("pointercancel", onPointerUp);
+        if (opts.wheel) surface.removeEventListener("wheel", onWheel, touchOpt);
+        surface.removeEventListener("gesturestart", onGesture);
+        surface.removeEventListener("gesturechange", onGesture);
+        surface.removeEventListener("gestureend", onGesture);
+        reset();
+      },
+      consumeGesture: function () {
+        var g = gestureFlag;
+        gestureFlag = false;
+        return g;
+      },
+      startedOnTarget: function () {
+        var v = onTarget;
+        onTarget = false;
+        return v;
+      }
+    };
   }
 
   function openBothPeek() {
@@ -648,15 +1045,24 @@
     closeContents();
     closeDownload();
     closeNote();
+    if (peekZoom) peekZoom.reset();
     bothPeekScan.src = "/" + page.scan;
     bothPeekScan.alt = "Original page " + page.n;
+    document.body.classList.add("is-peeking");
     setOverlay(bothPeek, true);
     if (bothInkBtn) bothInkBtn.setAttribute("aria-expanded", "true");
   }
 
   function closeBothPeek() {
-    if (!bothPeek || bothPeek.hidden) return;
+    if (!bothPeek) return;
+    if (bothPeek.hidden) {
+      document.body.classList.remove("is-peeking");
+      if (peekZoom) peekZoom.reset();
+      return;
+    }
     setOverlay(bothPeek, false);
+    document.body.classList.remove("is-peeking");
+    if (peekZoom) peekZoom.reset();
     bothPeekScan.removeAttribute("src");
     if (bothInkBtn) bothInkBtn.setAttribute("aria-expanded", "false");
   }
@@ -1088,14 +1494,30 @@
       if (view !== "both") return;
       if (!e.target.closest) return;
       if (!e.target.closest(".both-ink")) return;
+      if (inkZoom && inkZoom.consumeGesture()) return;
       openBothPeek();
     });
     if (bothPeekClose) {
       bothPeekClose.addEventListener("click", closeBothPeek);
     }
-    if (bothPeek) {
+    if (bothPeek && bothPeekScan) {
+      bothPeekScan.draggable = false;
+      peekZoom = attachPanZoom({
+        surface: bothPeek,
+        target: bothPeekScan,
+        container: bothPeek,
+        passScrollAtOne: false,
+        wheel: true,
+        doubleTap: true,
+        doubleTapEl: bothPeekScan,
+        ignoreSelector: ".both-peek-close",
+        zoomedClass: "is-zoomed"
+      });
       bothPeek.addEventListener("click", function (e) {
-        if (e.target === bothPeek || e.target === bothPeekScan) closeBothPeek();
+        if (peekZoom && peekZoom.consumeGesture()) return;
+        if (e.target === bothPeekScan) return;
+        if (peekZoom && peekZoom.startedOnTarget()) return;
+        closeBothPeek();
       });
     }
     window.addEventListener(
@@ -1109,6 +1531,7 @@
     window.addEventListener("resize", function () {
       syncChromeHeight();
       if (view !== "both") return;
+      if (inkZoom) inkZoom.reset();
       startBothObserver();
       paintCurrentBand();
       scheduleBothPick();
