@@ -360,6 +360,102 @@ body.reader {
   object-fit: contain;
 }
 
+/* ------------------------------------------------------------------ */
+/* Both — retype left, scan right (sefer); stacked on a narrow screen   */
+/* ------------------------------------------------------------------ */
+
+body.reader.is-both {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+body.reader.is-both .stage {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.both {
+  display: grid;
+  grid-template-areas: "scan" "retype";
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  flex: 1 1 auto;
+  height: 100%;
+  min-height: 0;
+}
+
+.both-scan {
+  grid-area: scan;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  max-height: min(42vh, 18rem);
+  overflow: auto;
+  background: var(--page);
+  border-bottom: 1px solid var(--rule);
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+.both-scan img {
+  display: block;
+  max-width: 100%;
+  max-height: min(42vh, 18rem);
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  touch-action: pan-x pan-y pinch-zoom;
+}
+
+.both-retype {
+  grid-area: retype;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+.both-retype .leaf {
+  max-width: none;
+}
+
+.both-retype .quiet {
+  margin-block: 2.4rem;
+}
+
+@media (min-width: 800px), (min-width: 700px) and (orientation: landscape) {
+  .both {
+    grid-template-areas: "retype scan";
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  .both-scan {
+    max-height: none;
+    height: 100%;
+    padding: 0.7rem 0.75rem 1rem;
+    border-bottom: 0;
+    border-inline-start: 1px solid var(--rule);
+  }
+
+  .both-scan img {
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+
+  .both-retype .leaf {
+    padding-inline: 1.8rem;
+  }
+}
+
 .colophon {
   flex-shrink: 0;
   min-height: 1.85rem;

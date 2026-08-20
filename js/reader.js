@@ -28,6 +28,7 @@
   var nextBtn = document.getElementById("next");
   var originalBtn = document.getElementById("view-original");
   var retypeBtn = document.getElementById("view-retype");
+  var bothBtn = document.getElementById("view-both");
   var farbrengenLine = document.getElementById("farbrengen-line");
   var workCue = document.getElementById("work-cue");
   var openContentsBtn = document.getElementById("open-contents");
@@ -85,7 +86,9 @@
 
   function normalizeView(v) {
     v = String(v || "").toLowerCase();
-    return v === "original" ? "original" : "retype";
+    if (v === "original") return "original";
+    if (v === "both") return "both";
+    return "retype";
   }
 
   function readStore() {
@@ -121,8 +124,10 @@
   function setViewButtons() {
     originalBtn.classList.toggle("is-active", view === "original");
     retypeBtn.classList.toggle("is-active", view === "retype");
+    bothBtn.classList.toggle("is-active", view === "both");
     originalBtn.setAttribute("aria-pressed", view === "original" ? "true" : "false");
     retypeBtn.setAttribute("aria-pressed", view === "retype" ? "true" : "false");
+    bothBtn.setAttribute("aria-pressed", view === "both" ? "true" : "false");
   }
 
   function hasRetype(page) {
@@ -330,6 +335,87 @@
     return paras;
   }
 
+  function makeScanImage(page) {
+    var img = document.createElement("img");
+    img.src = "/" + page.scan;
+    img.alt = "Sichos Kodesh vol. 1, page " + page.n;
+    img.decoding = "async";
+    return img;
+  }
+
+  function makeScanStage(page) {
+    var wrap = document.createElement("div");
+    wrap.className = "scan-stage";
+    wrap.appendChild(makeScanImage(page));
+    return wrap;
+  }
+
+  function makeQuiet() {
+    var quiet = document.createElement("p");
+    quiet.className = "quiet";
+    quiet.lang = "en";
+    quiet.textContent = "No retype for this page.";
+    return quiet;
+  }
+
+  function makeLeaf(page) {
+    var article = document.createElement("article");
+    article.className = "leaf leaf--" + page.type;
+    article.lang = "he";
+    article.dir = "rtl";
+
+    if (page.print) {
+      var folio = document.createElement("span");
+      folio.className = "leaf-print";
+      folio.textContent = page.print;
+      article.appendChild(folio);
+    }
+
+    if (page.status === "draft") {
+      var draft = document.createElement("span");
+      draft.className = "leaf-draft";
+      draft.lang = "en";
+      draft.textContent = "draft";
+      article.appendChild(draft);
+    }
+
+    if (page.type === "body") {
+      var stamp = document.createElement("div");
+      stamp.className = "leaf-stamp";
+      stamp.textContent = "הנחה בלתי מוגה";
+      article.appendChild(stamp);
+    }
+
+    var body = document.createElement("div");
+    body.className = "leaf-body";
+    body.innerHTML = page.html;
+    article.appendChild(body);
+    prepareParagraphs(article);
+    return article;
+  }
+
+  function makeRetypePane(page) {
+    if (!hasRetype(page)) return makeQuiet();
+    return makeLeaf(page);
+  }
+
+  function makeBoth(page) {
+    var split = document.createElement("div");
+    split.className = "both";
+
+    var retypeCol = document.createElement("div");
+    retypeCol.className = "both-retype";
+    retypeCol.appendChild(makeRetypePane(page));
+
+    var scanCol = document.createElement("div");
+    scanCol.className = "both-scan";
+    scanCol.appendChild(makeScanImage(page));
+
+    split.appendChild(retypeCol);
+    split.appendChild(scanCol);
+    return split;
+  }
+
   function render(pushUrl) {
     var page = byN[current] || pages[0];
     if (!page) return;
@@ -342,6 +428,7 @@
     nextBtn.disabled = current >= maxN;
     setViewButtons();
     updateFarbrengenLine(page);
+    document.body.classList.toggle("is-both", view === "both");
 
     var titleBits = ["שיחות קודש", "page " + page.n];
     if (page.print) titleBits.push(page.print);
@@ -350,56 +437,17 @@
     stage.replaceChildren();
 
     if (view === "original") {
-      var wrap = document.createElement("div");
-      wrap.className = "scan-stage";
-      var img = document.createElement("img");
-      img.src = "/" + page.scan;
-      img.alt = "Sichos Kodesh vol. 1, page " + page.n;
-      img.decoding = "async";
-      wrap.appendChild(img);
-      stage.appendChild(wrap);
+      stage.appendChild(makeScanStage(page));
+      preloadNeighbor(current + 1);
+      preloadNeighbor(current - 1);
+    } else if (view === "both") {
+      stage.appendChild(makeBoth(page));
       preloadNeighbor(current + 1);
       preloadNeighbor(current - 1);
     } else if (!hasRetype(page)) {
-      var quiet = document.createElement("p");
-      quiet.className = "quiet";
-      quiet.lang = "en";
-      quiet.textContent = "No retype for this page.";
-      stage.appendChild(quiet);
+      stage.appendChild(makeQuiet());
     } else {
-      var article = document.createElement("article");
-      article.className = "leaf leaf--" + page.type;
-      article.lang = "he";
-      article.dir = "rtl";
-
-      if (page.print) {
-        var folio = document.createElement("span");
-        folio.className = "leaf-print";
-        folio.textContent = page.print;
-        article.appendChild(folio);
-      }
-
-      if (page.status === "draft") {
-        var draft = document.createElement("span");
-        draft.className = "leaf-draft";
-        draft.lang = "en";
-        draft.textContent = "draft";
-        article.appendChild(draft);
-      }
-
-      if (page.type === "body") {
-        var stamp = document.createElement("div");
-        stamp.className = "leaf-stamp";
-        stamp.textContent = "הנחה בלתי מוגה";
-        article.appendChild(stamp);
-      }
-
-      var body = document.createElement("div");
-      body.className = "leaf-body";
-      body.innerHTML = page.html;
-      article.appendChild(body);
-      stage.appendChild(article);
-      prepareParagraphs(article);
+      stage.appendChild(makeLeaf(page));
     }
 
     persist();
@@ -612,7 +660,7 @@
     closeNote();
     lastFocus = document.activeElement;
     fillDownloadGroups();
-    setDownloadKind(view);
+    setDownloadKind(view === "both" ? "side-by-side" : view);
     var g = groupForPage(current);
     if (g) {
       downloadGroup.value = g.id;
@@ -757,7 +805,7 @@
   }
 
   function paraFromEvent(e) {
-    if (view !== "retype") return null;
+    if (view !== "retype" && view !== "both") return null;
     var t = e.target;
     if (!t || !t.closest) return null;
     var p = t.closest("p[data-p]");
@@ -792,6 +840,11 @@
     retypeBtn.addEventListener("click", function () {
       if (view === "retype") return;
       view = "retype";
+      render(false);
+    });
+    bothBtn.addEventListener("click", function () {
+      if (view === "both") return;
+      view = "both";
       render(false);
     });
     pageInput.addEventListener("change", function () {

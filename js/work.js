@@ -442,7 +442,7 @@
     takeNoteFromSheet();
     persist();
     if (n == null) return;
-    window.location.href = "/read/?p=" + n + "&work=1";
+    window.location.href = "/read/?p=" + n + "&view=both&work=1";
   }
 
   function exportPayload() {
