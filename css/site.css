@@ -360,6 +360,111 @@ body.reader {
   object-fit: contain;
 }
 
+/* ------------------------------------------------------------------ */
+/* Both — one scroll; retype is the leaf; ink is a follow-along strip   */
+/* ------------------------------------------------------------------ */
+
+body.reader.is-both .chrome {
+  position: sticky;
+  top: 0;
+  z-index: 8;
+}
+
+.both-ink {
+  position: sticky;
+  top: var(--chrome-h, 5.4rem);
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 32vh;
+  max-height: 36vh;
+  min-height: 6.5rem;
+  padding: 0.15rem 0.55rem;
+  overflow: hidden;
+  background: var(--page);
+  border-bottom: 1px solid var(--rule);
+  touch-action: manipulation;
+  user-select: none;
+}
+
+.both-ink-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.both-leaf .quiet {
+  margin-block: 2.4rem;
+}
+
+.both-peek {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2.4rem 0.75rem 1rem;
+  background: var(--page);
+}
+
+.both-peek[hidden] {
+  display: none !important;
+}
+
+.both-peek img {
+  display: block;
+  max-width: 100%;
+  max-height: calc(100vh - 3.2rem);
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+.both-peek-close {
+  position: absolute;
+  top: 0.55rem;
+  inset-inline-end: 0.9rem;
+  font-size: 0.82rem;
+  color: var(--mute);
+}
+
+.both-peek-close:hover {
+  color: var(--ink);
+}
+
+@media (min-width: 800px) {
+  .both {
+    display: grid;
+    grid-template-columns: minmax(0, var(--measure)) minmax(13rem, 16.5rem);
+    grid-template-areas: "leaf ink";
+    justify-content: center;
+    align-items: start;
+    max-width: calc(var(--measure) + 17.5rem);
+    margin: 0 auto;
+  }
+
+  .both-leaf {
+    grid-area: leaf;
+  }
+
+  .both-ink {
+    grid-area: ink;
+    align-self: start;
+    width: auto;
+    height: 28vh;
+    max-height: 13.5rem;
+    min-height: 5.5rem;
+    margin-top: 2.1rem;
+    border-bottom: 0;
+    border-inline-start: 1px solid var(--rule);
+    padding: 0.28rem 0.55rem;
+  }
+}
+
 .colophon {
   flex-shrink: 0;
   min-height: 1.85rem;

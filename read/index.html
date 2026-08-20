@@ -21,6 +21,7 @@
       <div class="bar-view" role="group" aria-label="View">
         <button type="button" class="view-btn" id="view-original" aria-pressed="false">Original</button>
         <button type="button" class="view-btn" id="view-retype" aria-pressed="true">Retype</button>
+        <button type="button" class="view-btn" id="view-both" aria-pressed="false">Both</button>
       </div>
       <div class="bar-page">
         <button type="button" class="step" id="prev" aria-label="Previous page">‹</button>
@@ -51,6 +52,11 @@
       </div>
       <div id="contents-list"></div>
     </div>
+  </div>
+
+  <div class="both-peek" id="both-peek" hidden>
+    <button type="button" class="both-peek-close" id="both-peek-close">Close</button>
+    <img id="both-peek-scan" alt="Original ink">
   </div>
 
   <div class="sheet" id="note-sheet" hidden>
