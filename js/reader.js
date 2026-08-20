@@ -68,6 +68,17 @@
   var downloadMode = "group";
   var downloadBusy = false;
 
+  var bothPeek = document.getElementById("both-peek");
+  var bothPeekScan = document.getElementById("both-peek-scan");
+  var bothPeekClose = document.getElementById("both-peek-close");
+  var bothInkBtn = null;
+  var bothCanvas = null;
+  var bothScanImg = null;
+  var bothParas = [];
+  var bothIndex = -1;
+  var bothObserver = null;
+  var bothRaf = 0;
+
   var noteCtx = null;
   var holdTimer = null;
   var holdTarget = null;
@@ -156,7 +167,7 @@
   }
 
   function overlayOpen() {
-    return !contentsEl.hidden || !noteSheet.hidden || !downloadSheet.hidden;
+    return !contentsEl.hidden || !noteSheet.hidden || !downloadSheet.hidden || (bothPeek && !bothPeek.hidden);
   }
 
   function setOverlay(el, open) {
@@ -201,6 +212,7 @@
     closeContents();
     closeNote();
     closeDownload();
+    closeBothPeek();
   }
 
   function fillContents() {
@@ -249,6 +261,7 @@
     }
     closeNote();
     closeDownload();
+    closeBothPeek();
     fillContents();
     setOverlay(contentsEl, true);
     openContentsBtn.setAttribute("aria-expanded", "true");
@@ -291,11 +304,15 @@
   }
 
   function updateWorkCue(page) {
-    if (!workCue) return;
+    if (!workCue) {
+      syncChromeHeight();
+      return;
+    }
     if (!workMode) {
       workCue.hidden = true;
       workCue.textContent = "";
       farbrengenLine.classList.remove("has-work-cue");
+      syncChromeHeight();
       return;
     }
     var rec = workByN[page.n];
@@ -304,11 +321,13 @@
       workCue.hidden = true;
       workCue.textContent = "";
       farbrengenLine.classList.remove("has-work-cue");
+      syncChromeHeight();
       return;
     }
     workCue.hidden = false;
     workCue.textContent = text;
     farbrengenLine.classList.add("has-work-cue");
+    syncChromeHeight();
   }
 
   function updateFarbrengenLine(page) {
@@ -400,20 +419,199 @@
   }
 
   function makeBoth(page) {
-    var split = document.createElement("div");
-    split.className = "both";
+    var wrap = document.createElement("div");
+    wrap.className = "both";
 
-    var retypeCol = document.createElement("div");
-    retypeCol.className = "both-retype";
-    retypeCol.appendChild(makeRetypePane(page));
+    var ink = document.createElement("button");
+    ink.type = "button";
+    ink.className = "both-ink";
+    ink.setAttribute("aria-expanded", "false");
+    ink.setAttribute("aria-controls", "both-peek");
+    ink.setAttribute("aria-label", "Original ink for the paragraph in view. Tap to enlarge.");
+    var canvas = document.createElement("canvas");
+    canvas.className = "both-ink-canvas";
+    canvas.setAttribute("aria-hidden", "true");
+    ink.appendChild(canvas);
+    wrap.appendChild(ink);
 
-    var scanCol = document.createElement("div");
-    scanCol.className = "both-scan";
-    scanCol.appendChild(makeScanImage(page));
+    var main = document.createElement("div");
+    main.className = "both-leaf";
+    main.appendChild(makeRetypePane(page));
+    wrap.appendChild(main);
+    return wrap;
+  }
 
-    split.appendChild(retypeCol);
-    split.appendChild(scanCol);
-    return split;
+  function syncChromeHeight() {
+    var chrome = document.querySelector(".chrome");
+    if (!chrome) return;
+    document.documentElement.style.setProperty("--chrome-h", chrome.offsetHeight + "px");
+  }
+
+  function paintScanBand(img, canvas, index, count) {
+    if (!img || !canvas || !img.naturalWidth) return;
+    var w = img.naturalWidth;
+    var h = img.naturalHeight;
+    var topSkip = h * 0.08;
+    var usable = h - topSkip - h * 0.08;
+    var n = Math.max(count, 1);
+    var band = usable / n;
+    var sy = topSkip + band * index;
+    var sh = Math.max(1, band);
+    if (sy + sh > h) sh = h - sy;
+    canvas.width = w;
+    canvas.height = Math.round(sh);
+    var ctx = canvas.getContext("2d");
+    ctx.drawImage(img, 0, sy, w, sh, 0, 0, w, Math.round(sh));
+  }
+
+  function paintFullScan(img, canvas) {
+    if (!img || !canvas || !img.naturalWidth) return;
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    canvas.getContext("2d").drawImage(img, 0, 0);
+  }
+
+  function bothRailSide() {
+    return window.matchMedia("(min-width: 800px)").matches;
+  }
+
+  function bothReadingLine() {
+    var chrome = document.querySelector(".chrome");
+    var top = chrome ? chrome.getBoundingClientRect().bottom : 0;
+    if (bothInkBtn && !bothRailSide()) {
+      var inkBottom = bothInkBtn.getBoundingClientRect().bottom;
+      if (inkBottom > top) top = inkBottom;
+    }
+    var room = Math.max(48, window.innerHeight - top);
+    return top + Math.min(56, room * 0.18);
+  }
+
+  function bothRootMargin() {
+    var y = bothReadingLine();
+    var vh = window.innerHeight || 1;
+    var band = Math.max(28, Math.min(64, vh * 0.08));
+    var top = Math.max(0, y - band / 2);
+    var bottom = Math.max(0, vh - (y + band / 2));
+    return "-" + Math.round(top) + "px 0px -" + Math.round(bottom) + "px 0px";
+  }
+
+  function showBothBand(index) {
+    if (index === bothIndex) return;
+    bothIndex = index;
+    paintScanBand(bothScanImg, bothCanvas, index, bothParas.length);
+  }
+
+  function pickBothPara() {
+    if (!bothParas.length || !bothScanImg || !bothCanvas) return;
+    var y = bothReadingLine();
+    var i;
+    var best = 0;
+    var bestDist = Infinity;
+    for (i = 0; i < bothParas.length; i++) {
+      var r = bothParas[i].getBoundingClientRect();
+      if (!r.height) continue;
+      if (r.top <= y && r.bottom >= y) {
+        showBothBand(i);
+        return;
+      }
+      var mid = (r.top + r.bottom) / 2;
+      var d = Math.abs(mid - y);
+      if (d < bestDist) {
+        bestDist = d;
+        best = i;
+      }
+    }
+    showBothBand(best);
+  }
+
+  function scheduleBothPick() {
+    if (view !== "both") return;
+    if (bothRaf) return;
+    bothRaf = window.requestAnimationFrame(function () {
+      bothRaf = 0;
+      pickBothPara();
+    });
+  }
+
+  function startBothObserver() {
+    if (bothObserver) {
+      bothObserver.disconnect();
+      bothObserver = null;
+    }
+    if (!bothParas.length || typeof IntersectionObserver !== "function") return;
+    bothObserver = new IntersectionObserver(
+      function () {
+        scheduleBothPick();
+      },
+      { root: null, rootMargin: bothRootMargin(), threshold: [0, 0.25, 0.5, 1] }
+    );
+    var i;
+    for (i = 0; i < bothParas.length; i++) bothObserver.observe(bothParas[i]);
+  }
+
+  function stopBothFollow() {
+    if (bothObserver) {
+      bothObserver.disconnect();
+      bothObserver = null;
+    }
+    if (bothRaf) {
+      window.cancelAnimationFrame(bothRaf);
+      bothRaf = 0;
+    }
+    bothInkBtn = null;
+    bothCanvas = null;
+    bothScanImg = null;
+    bothParas = [];
+    bothIndex = -1;
+    closeBothPeek();
+  }
+
+  function startBothFollow(page) {
+    bothInkBtn = stage.querySelector(".both-ink");
+    bothCanvas = stage.querySelector(".both-ink-canvas");
+    var leaf = stage.querySelector(".leaf");
+    bothParas = leaf ? noteableParagraphs(leaf) : [];
+    bothIndex = -1;
+    bothScanImg = null;
+    syncChromeHeight();
+
+    var img = new Image();
+    img.onload = function () {
+      if (view !== "both" || current !== page.n) return;
+      bothScanImg = img;
+      if (!bothParas.length) {
+        paintFullScan(img, bothCanvas);
+        return;
+      }
+      paintScanBand(img, bothCanvas, 0, bothParas.length);
+      bothIndex = 0;
+      startBothObserver();
+      pickBothPara();
+    };
+    img.onerror = function () {
+      if (view !== "both" || current !== page.n) return;
+      if (bothInkBtn) bothInkBtn.hidden = true;
+    };
+    img.src = "/" + page.scan;
+  }
+
+  function openBothPeek() {
+    var page = byN[current];
+    if (!page || !bothPeek) return;
+    closeContents();
+    closeDownload();
+    closeNote();
+    bothPeekScan.src = "/" + page.scan;
+    bothPeekScan.alt = "Original page " + page.n;
+    setOverlay(bothPeek, true);
+    if (bothInkBtn) bothInkBtn.setAttribute("aria-expanded", "true");
+  }
+
+  function closeBothPeek() {
+    if (!bothPeek || bothPeek.hidden) return;
+    setOverlay(bothPeek, false);
+    bothPeekScan.removeAttribute("src");
+    if (bothInkBtn) bothInkBtn.setAttribute("aria-expanded", "false");
   }
 
   function render(pushUrl) {
@@ -429,6 +627,7 @@
     setViewButtons();
     updateFarbrengenLine(page);
     document.body.classList.toggle("is-both", view === "both");
+    stopBothFollow();
 
     var titleBits = ["שיחות קודש", "page " + page.n];
     if (page.print) titleBits.push(page.print);
@@ -442,6 +641,7 @@
       preloadNeighbor(current - 1);
     } else if (view === "both") {
       stage.appendChild(makeBoth(page));
+      startBothFollow(page);
       preloadNeighbor(current + 1);
       preloadNeighbor(current - 1);
     } else if (!hasRetype(page)) {
@@ -528,19 +728,7 @@
     sheetInk.hidden = false;
     var img = new Image();
     img.onload = function () {
-      var w = img.naturalWidth;
-      var h = img.naturalHeight;
-      var topSkip = h * 0.08;
-      var usable = h - topSkip - h * 0.08;
-      var n = Math.max(count, 1);
-      var band = usable / n;
-      var sy = topSkip + band * index;
-      var sh = Math.max(1, band);
-      if (sy + sh > h) sh = h - sy;
-      sheetCanvas.width = w;
-      sheetCanvas.height = Math.round(sh);
-      var ctx = sheetCanvas.getContext("2d");
-      ctx.drawImage(img, 0, sy, w, sh, 0, 0, w, Math.round(sh));
+      paintScanBand(img, sheetCanvas, index, count);
     };
     img.onerror = function () {
       showFullScan(page);
@@ -658,6 +846,7 @@
   function openDownloadSheet() {
     closeContents();
     closeNote();
+    closeBothPeek();
     lastFocus = document.activeElement;
     fillDownloadGroups();
     setDownloadKind(view === "both" ? "side-by-side" : view);
@@ -733,6 +922,7 @@
     if (!page) return;
     closeContents();
     closeDownload();
+    closeBothPeek();
     lastFocus = document.activeElement;
     noteCtx = {
       page: page,
@@ -846,6 +1036,34 @@
       if (view === "both") return;
       view = "both";
       render(false);
+    });
+    stage.addEventListener("click", function (e) {
+      if (view !== "both") return;
+      if (!e.target.closest) return;
+      if (!e.target.closest(".both-ink")) return;
+      openBothPeek();
+    });
+    if (bothPeekClose) {
+      bothPeekClose.addEventListener("click", closeBothPeek);
+    }
+    if (bothPeek) {
+      bothPeek.addEventListener("click", function (e) {
+        if (e.target === bothPeek || e.target === bothPeekScan) closeBothPeek();
+      });
+    }
+    window.addEventListener(
+      "scroll",
+      function () {
+        if (view !== "both") return;
+        scheduleBothPick();
+      },
+      { passive: true }
+    );
+    window.addEventListener("resize", function () {
+      syncChromeHeight();
+      if (view !== "both") return;
+      startBothObserver();
+      scheduleBothPick();
     });
     pageInput.addEventListener("change", function () {
       go(pageInput.value, true);
@@ -968,6 +1186,11 @@
         if (!noteSheet.hidden) {
           e.preventDefault();
           closeNote();
+          return;
+        }
+        if (bothPeek && !bothPeek.hidden) {
+          e.preventDefault();
+          closeBothPeek();
           return;
         }
         if (!contentsEl.hidden) {
