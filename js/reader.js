@@ -471,6 +471,54 @@
     canvas.getContext("2d").drawImage(img, 0, 0);
   }
 
+  function paintFollowLens(img, canvas, index, count, boxW, boxH) {
+    if (!img || !canvas || !img.naturalWidth) return;
+    var w = img.naturalWidth;
+    var h = img.naturalHeight;
+    var topSkip = h * 0.08;
+    var usable = Math.max(1, h - topSkip - h * 0.08);
+    var n = Math.max(count, 1);
+    var band = usable / n;
+    var bandSy = topSkip + band * index;
+    var bandSh = Math.max(1, band);
+    if (bandSy + bandSh > h) bandSh = h - bandSy;
+    var sy = bandSy;
+    var sh = bandSh;
+    if (boxW > 0 && boxH > 0) {
+      var need = w * (boxH / boxW);
+      if (need > sh) {
+        var mid = bandSy + bandSh / 2;
+        sh = Math.min(h, need);
+        sy = mid - sh / 2;
+        if (sy < 0) sy = 0;
+        if (sy + sh > h) sy = h - sh;
+      }
+    }
+    canvas.width = w;
+    canvas.height = Math.round(sh);
+    var ctx = canvas.getContext("2d");
+    ctx.drawImage(img, 0, sy, w, sh, 0, 0, w, Math.round(sh));
+  }
+
+  function paintCurrentBand() {
+    if (!bothScanImg || !bothCanvas) return;
+    if (!bothParas.length) {
+      paintFullScan(bothScanImg, bothCanvas);
+      return;
+    }
+    var index = bothIndex < 0 ? 0 : bothIndex;
+    var boxW = bothInkBtn ? bothInkBtn.clientWidth : 0;
+    var boxH = bothInkBtn ? bothInkBtn.clientHeight : 0;
+    paintFollowLens(
+      bothScanImg,
+      bothCanvas,
+      index,
+      bothParas.length,
+      boxW,
+      boxH
+    );
+  }
+
   function bothRailSide() {
     return window.matchMedia("(min-width: 800px)").matches;
   }
@@ -496,9 +544,9 @@
   }
 
   function showBothBand(index) {
-    if (index === bothIndex) return;
+    if (index === bothIndex && bothCanvas && bothCanvas.width) return;
     bothIndex = index;
-    paintScanBand(bothScanImg, bothCanvas, index, bothParas.length);
+    paintCurrentBand();
   }
 
   function pickBothPara() {
@@ -583,8 +631,7 @@
         paintFullScan(img, bothCanvas);
         return;
       }
-      paintScanBand(img, bothCanvas, 0, bothParas.length);
-      bothIndex = 0;
+      bothIndex = -1;
       startBothObserver();
       pickBothPara();
     };
@@ -1063,6 +1110,7 @@
       syncChromeHeight();
       if (view !== "both") return;
       startBothObserver();
+      paintCurrentBand();
       scheduleBothPick();
     });
     pageInput.addEventListener("change", function () {
