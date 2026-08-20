@@ -695,6 +695,7 @@
     var lastTapX = 0;
     var lastTapY = 0;
     var mouseOn = false;
+    var onTarget = false;
     var destroyed = false;
     var touchOpt = { passive: false };
 
@@ -718,6 +719,7 @@
       pointerIds = [];
       mouseOn = false;
       moved = false;
+      onTarget = false;
       apply();
     }
 
@@ -771,6 +773,10 @@
       var t = e.target;
       if (!t || !t.closest) return false;
       return !!t.closest(opts.ignoreSelector);
+    }
+
+    function markOnTarget(e) {
+      onTarget = !!(e.target && (e.target === target || (target.contains && target.contains(e.target))));
     }
 
     function addPtr(id, x, y) {
@@ -856,6 +862,7 @@
     function onTouchStart(e) {
       if (destroyed) return;
       if (ignore(e)) return;
+      markOnTarget(e);
       var i;
       for (i = 0; i < e.changedTouches.length; i++) {
         var t = e.changedTouches[i];
@@ -926,7 +933,7 @@
         startX = p.x;
         startY = p.y;
       } else if (ended.length === 1 && !moved) {
-        maybeDoubleTap(ended[0].clientX, ended[0].clientY, e.target);
+        maybeDoubleTap(ended[0].clientX, ended[0].clientY, onTarget ? target : e.target);
       }
     }
 
@@ -935,6 +942,7 @@
       if (e.pointerType === "touch") return;
       if (e.button !== 0) return;
       if (ignore(e)) return;
+      markOnTarget(e);
       mouseOn = true;
       moved = false;
       gestureFlag = false;
@@ -942,14 +950,7 @@
       startY = e.clientY;
       lastX = e.clientX;
       lastY = e.clientY;
-      if (st.scale > 1.001) {
-        e.preventDefault();
-        if (surface.setPointerCapture) {
-          try {
-            surface.setPointerCapture(e.pointerId);
-          } catch (err) {}
-        }
-      }
+      if (st.scale > 1.001) e.preventDefault();
     }
 
     function onPointerMove(e) {
@@ -976,15 +977,8 @@
       if (e.pointerType === "touch") return;
       if (!mouseOn) return;
       mouseOn = false;
-      if (surface.releasePointerCapture && e.pointerId != null) {
-        try {
-          if (surface.hasPointerCapture && surface.hasPointerCapture(e.pointerId)) {
-            surface.releasePointerCapture(e.pointerId);
-          }
-        } catch (err) {}
-      }
       if (moved) gestureFlag = true;
-      else maybeDoubleTap(e.clientX, e.clientY, e.target);
+      else maybeDoubleTap(e.clientX, e.clientY, onTarget ? target : e.target);
     }
 
     function onWheel(e) {
@@ -1005,9 +999,9 @@
     surface.addEventListener("touchend", onTouchEnd);
     surface.addEventListener("touchcancel", onTouchEnd);
     surface.addEventListener("pointerdown", onPointerDown);
-    surface.addEventListener("pointermove", onPointerMove);
-    surface.addEventListener("pointerup", onPointerUp);
-    surface.addEventListener("pointercancel", onPointerUp);
+    document.addEventListener("pointermove", onPointerMove);
+    document.addEventListener("pointerup", onPointerUp);
+    document.addEventListener("pointercancel", onPointerUp);
     if (opts.wheel) surface.addEventListener("wheel", onWheel, touchOpt);
     surface.addEventListener("gesturestart", onGesture);
     surface.addEventListener("gesturechange", onGesture);
@@ -1023,9 +1017,9 @@
         surface.removeEventListener("touchend", onTouchEnd);
         surface.removeEventListener("touchcancel", onTouchEnd);
         surface.removeEventListener("pointerdown", onPointerDown);
-        surface.removeEventListener("pointermove", onPointerMove);
-        surface.removeEventListener("pointerup", onPointerUp);
-        surface.removeEventListener("pointercancel", onPointerUp);
+        document.removeEventListener("pointermove", onPointerMove);
+        document.removeEventListener("pointerup", onPointerUp);
+        document.removeEventListener("pointercancel", onPointerUp);
         if (opts.wheel) surface.removeEventListener("wheel", onWheel, touchOpt);
         surface.removeEventListener("gesturestart", onGesture);
         surface.removeEventListener("gesturechange", onGesture);
@@ -1036,6 +1030,11 @@
         var g = gestureFlag;
         gestureFlag = false;
         return g;
+      },
+      startedOnTarget: function () {
+        var v = onTarget;
+        onTarget = false;
+        return v;
       }
     };
   }
@@ -1517,6 +1516,7 @@
       bothPeek.addEventListener("click", function (e) {
         if (peekZoom && peekZoom.consumeGesture()) return;
         if (e.target === bothPeekScan) return;
+        if (peekZoom && peekZoom.startedOnTarget()) return;
         closeBothPeek();
       });
     }
