@@ -191,7 +191,7 @@
     ">": "<"
   };
 
-  function reverseRtl(str) {
+  function reverseClusters(str, mirror) {
     var clusters = [];
     var i;
     for (i = 0; i < str.length; i++) {
@@ -203,12 +203,18 @@
       }
     }
     clusters.reverse();
-    for (i = 0; i < clusters.length; i++) {
-      if (clusters[i].length === 1 && MIRROR[clusters[i]]) {
-        clusters[i] = MIRROR[clusters[i]];
+    if (mirror) {
+      for (i = 0; i < clusters.length; i++) {
+        if (clusters[i].length === 1 && MIRROR[clusters[i]]) {
+          clusters[i] = MIRROR[clusters[i]];
+        }
       }
     }
     return clusters.join("");
+  }
+
+  function reverseRtl(str) {
+    return reverseClusters(str, true);
   }
 
   function charDir(ch) {
@@ -217,9 +223,21 @@
     return "N";
   }
 
-  function toVisual(logical) {
-    if (!logical) return "";
-    if (!/[\u0590-\u05FF\uFB1D-\uFB4F]/.test(logical)) return logical;
+  // fontkit script detection skips digits/punctuation (Common) and uses the
+  // first Hebrew or Latin letter to pick rtl vs ltr, then reverses the whole
+  // glyph run when the script is Hebrew.
+  function firstLayoutDir(str) {
+    var i;
+    for (i = 0; i < str.length; i++) {
+      var ch = str.charAt(i);
+      if (isRtlChar(ch)) return "R";
+      var c = ch.charCodeAt(0);
+      if ((c >= 0x41 && c <= 0x5a) || (c >= 0x61 && c <= 0x7a)) return "L";
+    }
+    return "R";
+  }
+
+  function splitBidiRuns(logical) {
     var runs = [];
     var cur = "";
     var curType = null;
@@ -240,10 +258,28 @@
       }
     }
     if (cur) runs.push({ t: curType, s: cur });
-    runs.reverse();
+    return runs;
+  }
+
+  // pdf-lib drawText paints glyphs left-to-right. fontkit already reverses
+  // Hebrew glyph runs, so reversing Hebrew here double-flips every word
+  // (יו״ד → ד״וי). Keep Hebrew logical; only pre-reverse Latin/number runs
+  // so they survive fontkit's RTL reverse. If the string starts with Latin,
+  // fontkit will not reverse — then Hebrew runs still need a visual reverse.
+  function toVisual(logical) {
+    if (!logical) return "";
+    if (!/[\u0590-\u05FF\uFB1D-\uFB4F]/.test(logical)) return logical;
+    var runs = splitBidiRuns(logical);
+    if (firstLayoutDir(logical) === "L") {
+      return runs
+        .map(function (r) {
+          return r.t === "R" ? reverseRtl(r.s) : r.s;
+        })
+        .join("");
+    }
     return runs
       .map(function (r) {
-        return r.t === "L" ? r.s : reverseRtl(r.s);
+        return r.t === "L" ? reverseClusters(r.s, false) : r.s;
       })
       .join("");
   }
@@ -687,6 +723,7 @@
   }
 
   function drawSpacedHebrew(page, font, logical, y, size, color, tracking, pageWidth) {
+    // One glyph per drawText, so fontkit's RTL reverse is a no-op — reverse here.
     var vis = glyphSafe(font, reverseRtl(logical));
     var i;
     var total = 0;
