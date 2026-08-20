@@ -6,6 +6,12 @@
   --mute: #5A5854;
   --rule: #C8C4BC;
   --mark: #7A1F2B;
+  --grade-none: #C8C4BC;
+  --grade-bad: #6B1216;
+  --grade-rough: #8A5720;
+  --grade-ok: #111111;
+  --grade-good: #3E5640;
+  --grade-verified: #7A1F2B;
   --measure: 40rem;
   --ui: "Source Sans 3", system-ui, "Segoe UI", sans-serif;
   --sefer: "Frank Ruhl Libre", "Times New Roman", serif;
@@ -657,6 +663,222 @@ body.note {
 }
 
 /* ------------------------------------------------------------------ */
+/* Work ledger                                                          */
+/* ------------------------------------------------------------------ */
+
+body.work {
+  min-height: 100vh;
+}
+
+.ledger {
+  max-width: 42rem;
+  margin: 0 auto;
+  padding: 2.4rem 1.5rem 4rem;
+}
+
+.ledger h1 {
+  margin: 0 0 0.55rem;
+  font-family: var(--ui);
+  font-weight: 600;
+  font-size: 1.45rem;
+  line-height: 1.2;
+}
+
+.ledger-counts {
+  margin: 0 0 0.35rem;
+  font-size: 0.98rem;
+  color: var(--ink);
+}
+
+.ledger-legend {
+  margin: 0 0 0.28rem;
+  font-size: 0.82rem;
+  color: var(--mute);
+}
+
+.ledger-legend .pg {
+  margin: 0;
+}
+
+.ledger-models {
+  margin: 0 0 1.7rem;
+  font-size: 0.82rem;
+  color: var(--mute);
+}
+
+.ledger-kicker {
+  margin: 1.35rem 0 0.45rem;
+  font-family: var(--type);
+  font-weight: 400;
+  font-size: 0.82rem;
+  color: var(--mute);
+}
+
+.ledger-group {
+  margin: 0 0 1.15rem;
+}
+
+.ledger-head {
+  margin: 0 0 0.22rem;
+  font-family: var(--sefer);
+  font-weight: 400;
+  font-size: 1.08rem;
+  line-height: 1.35;
+}
+
+.ledger-head.is-front {
+  color: var(--mute);
+  font-size: 0.98rem;
+}
+
+.ledger-pages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.12rem 0.62rem;
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.pg {
+  text-decoration: none;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: var(--ink);
+}
+
+a.pg:hover,
+.ledger-pages .pg:hover {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+}
+
+.pg.grade-none {
+  color: var(--grade-none);
+}
+
+.pg.grade-bad {
+  color: var(--grade-bad);
+}
+
+.pg.grade-rough {
+  color: var(--grade-rough);
+}
+
+.pg.grade-ok {
+  color: var(--grade-ok);
+}
+
+.pg.grade-good {
+  color: var(--grade-good);
+}
+
+.pg.grade-verified {
+  color: var(--grade-verified);
+}
+
+.ledger-notes {
+  margin: 0.28rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--mute);
+}
+
+.ledger-notes li {
+  margin: 0 0 0.18rem;
+}
+
+.ledger-note-pages {
+  color: var(--ink);
+}
+
+.sheet-model {
+  margin: -0.35rem 0 0.85rem;
+  font-size: 0.82rem;
+  color: var(--mute);
+}
+
+.sheet-grades {
+  margin-bottom: 1.05rem;
+}
+
+.sheet-grades .sheet-choice.grade-none {
+  color: var(--grade-none);
+}
+
+.sheet-grades .sheet-choice.grade-bad {
+  color: var(--grade-bad);
+}
+
+.sheet-grades .sheet-choice.grade-rough {
+  color: var(--grade-rough);
+}
+
+.sheet-grades .sheet-choice.grade-ok {
+  color: var(--grade-ok);
+}
+
+.sheet-grades .sheet-choice.grade-good {
+  color: var(--grade-good);
+}
+
+.sheet-grades .sheet-choice.grade-verified {
+  color: var(--grade-verified);
+}
+
+.sheet-grades .sheet-choice.is-active {
+  border-bottom-color: currentColor;
+}
+
+#rate-note {
+  min-height: 4.5rem;
+}
+
+.sheet-check {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  margin: 0.95rem 0 0.2rem;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.sheet-check input {
+  width: 0.95rem;
+  height: 0.95rem;
+  accent-color: var(--mark);
+}
+
+.sheet-hint {
+  margin: 0 0 0.35rem;
+  font-size: 0.82rem;
+  color: var(--mute);
+}
+
+/* ------------------------------------------------------------------ */
+/* Reader work cue (?work=1 only)                                       */
+/* ------------------------------------------------------------------ */
+
+.work-cue {
+  margin: 0;
+  width: 100%;
+  padding: 0.14rem 0.9rem 0.28rem;
+  border-bottom: 1px solid var(--ink);
+  background: var(--page);
+  font-family: var(--ui);
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--mute);
+  text-align: center;
+}
+
+.farbrengen-line.has-work-cue {
+  border-bottom-color: var(--rule);
+}
+
+/* ------------------------------------------------------------------ */
 /* Hold-to-note on retype paragraphs                                    */
 /* ------------------------------------------------------------------ */
 
@@ -900,7 +1122,8 @@ body.note {
 }
 
 #sheet-send,
-#download-go {
+#download-go,
+#rate-save {
   color: var(--ink);
   border-bottom-color: var(--mark);
 }
@@ -1100,5 +1323,13 @@ body.note {
 
   .letter {
     padding: 2.4rem 1.15rem 3.5rem;
+  }
+
+  .ledger {
+    padding: 1.8rem 1.15rem 3.5rem;
+  }
+
+  .work-cue {
+    padding-inline: 0.75rem;
   }
 }
