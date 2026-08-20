@@ -3,16 +3,32 @@
 
   var WORK_URL = "/data/work.json";
   var TOC_URL = "/data/farbrengens.json";
-  var STATES = ["verified", "typed", "needs-work", "skip"];
+  var GRADES = ["none", "bad", "rough", "ok", "good", "verified"];
   var LABELS = {
-    verified: "verified",
-    typed: "typed",
-    "needs-work": "needs work",
-    skip: "skip"
+    none: "none",
+    bad: "bad",
+    rough: "rough",
+    ok: "ok",
+    good: "good",
+    verified: "verified"
   };
 
   var countsEl = document.getElementById("counts");
+  var legendEl = document.getElementById("legend");
   var boardEl = document.getElementById("board");
+
+  function gradeOf(rec) {
+    var g = rec && rec.grade;
+    if (GRADES.indexOf(g) >= 0) return g;
+    if (rec && rec.state === "skip") return "none";
+    if (rec && rec.state === "verified") return "verified";
+    return "ok";
+  }
+
+  function modelOf(rec) {
+    var m = rec && rec.model != null ? String(rec.model).trim() : "";
+    return m;
+  }
 
   function allTocGroups(toc) {
     return (toc.front || []).concat(toc.farbrengens || []);
@@ -73,7 +89,9 @@
   }
 
   function titleFor(rec) {
-    var bits = [LABELS[rec.state] || rec.state];
+    var bits = [LABELS[gradeOf(rec)] || gradeOf(rec)];
+    var model = modelOf(rec);
+    if (model) bits.push("model " + model);
     if (rec.print) bits.push("print " + rec.print);
     if (rec.note) bits.push(rec.note);
     return bits.join(" · ");
@@ -87,20 +105,31 @@
     boardEl.appendChild(h);
   }
 
-  function renderCounts(records) {
-    var tally = { verified: 0, typed: 0, "needs-work": 0, skip: 0 };
+  function renderLegend() {
+    if (!legendEl) return;
+    legendEl.replaceChildren();
     var i;
+    for (i = 0; i < GRADES.length; i++) {
+      if (i) legendEl.appendChild(document.createTextNode(" · "));
+      var span = document.createElement("span");
+      span.className = "pg grade-" + GRADES[i];
+      span.textContent = LABELS[GRADES[i]];
+      legendEl.appendChild(span);
+    }
+  }
+
+  function renderCounts(records) {
+    var tally = {};
+    var i;
+    for (i = 0; i < GRADES.length; i++) tally[GRADES[i]] = 0;
     for (i = 0; i < records.length; i++) {
-      var st = records[i].state;
-      if (tally[st] == null) tally[st] = 0;
-      tally[st] += 1;
+      var g = gradeOf(records[i]);
+      tally[g] = (tally[g] || 0) + 1;
     }
-    var remaining = (tally.typed || 0) + (tally["needs-work"] || 0);
     var parts = [];
-    for (i = 0; i < STATES.length; i++) {
-      parts.push(LABELS[STATES[i]] + " " + (tally[STATES[i]] || 0));
+    for (i = 0; i < GRADES.length; i++) {
+      parts.push(LABELS[GRADES[i]] + " " + (tally[GRADES[i]] || 0));
     }
-    parts.push("remaining " + remaining);
     countsEl.textContent = parts.join(" · ");
   }
 
@@ -137,12 +166,12 @@
         var rec = byN[g.ns[i]];
         if (!rec) continue;
         var a = document.createElement("a");
-        a.className = "pg is-" + rec.state;
+        a.className = "pg grade-" + gradeOf(rec);
         a.href = hrefFor(rec.n);
         a.textContent = String(rec.n);
         a.title = titleFor(rec);
         row.appendChild(a);
-        if (rec.note && rec.state !== "skip") {
+        if (rec.note && gradeOf(rec) !== "none") {
           notes.push(rec);
         }
       }
@@ -176,6 +205,8 @@
       boardEl.appendChild(section);
     }
   }
+
+  renderLegend();
 
   Promise.all([
     fetch(WORK_URL).then(function (res) {

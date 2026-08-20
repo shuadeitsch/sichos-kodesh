@@ -6,6 +6,12 @@
   --mute: #5A5854;
   --rule: #C8C4BC;
   --mark: #7A1F2B;
+  --grade-none: #C8C4BC;
+  --grade-bad: #6B1216;
+  --grade-rough: #8A5720;
+  --grade-ok: #111111;
+  --grade-good: #3E5640;
+  --grade-verified: #7A1F2B;
   --measure: 40rem;
   --ui: "Source Sans 3", system-ui, "Segoe UI", sans-serif;
   --sefer: "Frank Ruhl Libre", "Times New Roman", serif;
@@ -735,25 +741,33 @@ body.work {
 }
 
 a.pg:hover {
-  text-decoration: none;
-  color: var(--mark);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
 }
 
-.pg.is-verified {
-  color: var(--mark);
+.pg.grade-none {
+  color: var(--grade-none);
 }
 
-.pg.is-typed {
-  color: var(--ink);
+.pg.grade-bad {
+  color: var(--grade-bad);
 }
 
-.pg.is-needs-work {
-  color: var(--ink);
-  border-bottom: 1px dotted var(--ink);
+.pg.grade-rough {
+  color: var(--grade-rough);
 }
 
-.pg.is-skip {
-  color: var(--rule);
+.pg.grade-ok {
+  color: var(--grade-ok);
+}
+
+.pg.grade-good {
+  color: var(--grade-good);
+}
+
+.pg.grade-verified {
+  color: var(--grade-verified);
 }
 
 .ledger-notes {

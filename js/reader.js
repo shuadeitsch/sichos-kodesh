@@ -252,9 +252,13 @@
 
   function workLabel(rec) {
     if (!rec) return "";
-    var st = rec.state === "needs-work" ? "needs work" : rec.state;
-    if (rec.note) return st + " · " + rec.note;
-    return st;
+    var grade = rec.grade || rec.state || "";
+    if (grade === "needs-work") grade = "needs work";
+    var bits = [];
+    if (grade) bits.push(grade);
+    if (rec.model && rec.model !== "unknown") bits.push("model " + rec.model);
+    if (rec.note) bits.push(rec.note);
+    return bits.join(" · ");
   }
 
   function updateWorkCue(page) {
