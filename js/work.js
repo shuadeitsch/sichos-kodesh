@@ -15,6 +15,7 @@
 
   var countsEl = document.getElementById("counts");
   var legendEl = document.getElementById("legend");
+  var modelsEl = document.getElementById("models");
   var boardEl = document.getElementById("board");
 
   function gradeOf(rec) {
@@ -133,6 +134,19 @@
     countsEl.textContent = parts.join(" · ");
   }
 
+  function renderModels(records) {
+    if (!modelsEl) return;
+    var seen = {};
+    var i;
+    for (i = 0; i < records.length; i++) {
+      var m = modelOf(records[i]) || "unknown";
+      seen[m] = true;
+    }
+    var keys = Object.keys(seen).sort();
+    if (keys.length === 1) modelsEl.textContent = "model " + keys[0];
+    else modelsEl.textContent = "model mixed — hover a page";
+  }
+
   function renderBoard(toc, byN, records) {
     boardEl.replaceChildren();
     var groups = groupPages(toc, records);
@@ -227,6 +241,7 @@
         byN[records[i].n] = records[i];
       }
       renderCounts(records);
+      renderModels(records);
       renderBoard(toc, byN, records);
     })
     .catch(function () {

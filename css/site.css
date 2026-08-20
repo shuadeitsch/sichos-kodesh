@@ -691,13 +691,19 @@ body.work {
 }
 
 .ledger-legend {
-  margin: 0 0 1.7rem;
+  margin: 0 0 0.28rem;
   font-size: 0.82rem;
   color: var(--mute);
 }
 
 .ledger-legend .pg {
   margin: 0;
+}
+
+.ledger-models {
+  margin: 0 0 1.7rem;
+  font-size: 0.82rem;
+  color: var(--mute);
 }
 
 .ledger-kicker {
