@@ -746,7 +746,8 @@ body.work {
   color: var(--ink);
 }
 
-a.pg:hover {
+a.pg:hover,
+.ledger-pages .pg:hover {
   text-decoration: underline;
   text-decoration-thickness: 1px;
   text-underline-offset: 0.18em;
@@ -791,6 +792,69 @@ a.pg:hover {
 
 .ledger-note-pages {
   color: var(--ink);
+}
+
+.sheet-model {
+  margin: -0.35rem 0 0.85rem;
+  font-size: 0.82rem;
+  color: var(--mute);
+}
+
+.sheet-grades {
+  margin-bottom: 1.05rem;
+}
+
+.sheet-grades .sheet-choice.grade-none {
+  color: var(--grade-none);
+}
+
+.sheet-grades .sheet-choice.grade-bad {
+  color: var(--grade-bad);
+}
+
+.sheet-grades .sheet-choice.grade-rough {
+  color: var(--grade-rough);
+}
+
+.sheet-grades .sheet-choice.grade-ok {
+  color: var(--grade-ok);
+}
+
+.sheet-grades .sheet-choice.grade-good {
+  color: var(--grade-good);
+}
+
+.sheet-grades .sheet-choice.grade-verified {
+  color: var(--grade-verified);
+}
+
+.sheet-grades .sheet-choice.is-active {
+  border-bottom-color: currentColor;
+}
+
+#rate-note {
+  min-height: 4.5rem;
+}
+
+.sheet-check {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  margin: 0.95rem 0 0.2rem;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.sheet-check input {
+  width: 0.95rem;
+  height: 0.95rem;
+  accent-color: var(--mark);
+}
+
+.sheet-hint {
+  margin: 0 0 0.35rem;
+  font-size: 0.82rem;
+  color: var(--mute);
 }
 
 /* ------------------------------------------------------------------ */
@@ -1058,7 +1122,8 @@ a.pg:hover {
 }
 
 #sheet-send,
-#download-go {
+#download-go,
+#rate-save {
   color: var(--ink);
   border-bottom-color: var(--mark);
 }

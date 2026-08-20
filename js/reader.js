@@ -250,6 +250,30 @@
     closeContentsBtn.focus();
   }
 
+  function applyWorkStore(map) {
+    var store = {};
+    try {
+      var raw = localStorage.getItem("sichos-kodesh-work");
+      if (raw) {
+        var data = JSON.parse(raw);
+        store = (data && data.pages) || data || {};
+      }
+    } catch (e) {
+      return;
+    }
+    var key;
+    for (key in store) {
+      if (!Object.prototype.hasOwnProperty.call(store, key)) continue;
+      var n = parseInt(key, 10);
+      if (!map[n] || !store[key] || typeof store[key] !== "object") continue;
+      var rec = map[n];
+      var local = store[key];
+      if (local.grade) rec.grade = local.grade;
+      if (Object.prototype.hasOwnProperty.call(local, "note")) rec.note = local.note || "";
+      if (local.retype) rec.retype = true;
+    }
+  }
+
   function workLabel(rec) {
     if (!rec) return "";
     var grade = rec.grade || rec.state || "";
@@ -999,6 +1023,7 @@
       for (i = 0; i < workPages.length; i++) {
         workByN[workPages[i].n] = workPages[i];
       }
+      applyWorkStore(workByN);
       bootFromLocation();
       render(false);
     })

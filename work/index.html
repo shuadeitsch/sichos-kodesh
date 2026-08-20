@@ -17,7 +17,9 @@
     <div class="bar-brand">
       <a href="/" lang="he">שיחות קודש</a>
     </div>
-    <div class="bar-note">Work</div>
+    <div class="bar-note">
+      <button type="button" class="bar-ctl" id="download-ratings">Download ratings</button>
+    </div>
   </header>
 
   <main class="ledger">
@@ -39,6 +41,32 @@
     <p class="ledger-models" id="models"></p>
     <div id="board"></div>
   </main>
+
+  <div class="sheet" id="rate-sheet" hidden>
+    <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="rate-heading">
+      <p class="sheet-kicker" id="rate-kicker"></p>
+      <h2 id="rate-heading" class="sheet-heading">Rate</h2>
+      <p class="sheet-model" id="rate-model"></p>
+
+      <p class="sheet-label" id="rate-grade-label">Grade</p>
+      <div class="sheet-choices sheet-grades" id="rate-grades" role="radiogroup" aria-labelledby="rate-grade-label"></div>
+
+      <label class="sheet-label" for="rate-note">Note</label>
+      <textarea id="rate-note" rows="3"></textarea>
+
+      <label class="sheet-check">
+        <input id="rate-retype" type="checkbox">
+        Retype later
+      </label>
+      <p class="sheet-hint">Queues the page only. Does not start a retype.</p>
+
+      <div class="sheet-actions">
+        <button type="button" id="rate-save">Save</button>
+        <button type="button" id="rate-read">Read</button>
+        <button type="button" id="rate-close">Close</button>
+      </div>
+    </div>
+  </div>
 
   <script src="/js/work.js" defer></script>
 </body>
