@@ -6,6 +6,7 @@
   var DEFAULT_VIEW = "retype";
   var DATA_URL = "/data/pages.json";
   var TOC_URL = "/data/farbrengens.json";
+  var WORK_URL = "/data/work.json";
   var HOLD_MS = 520;
   var MOVE_PX = 8;
   var MAIL = "sichos@agentmail.to";
@@ -17,6 +18,8 @@
   var current = DEFAULT_PAGE;
   var view = DEFAULT_VIEW;
   var toc = { front: [], farbrengens: [] };
+  var workMode = false;
+  var workByN = {};
 
   var stage = document.getElementById("stage");
   var pageInput = document.getElementById("page-input");
@@ -26,6 +29,7 @@
   var originalBtn = document.getElementById("view-original");
   var retypeBtn = document.getElementById("view-retype");
   var farbrengenLine = document.getElementById("farbrengen-line");
+  var workCue = document.getElementById("work-cue");
   var openContentsBtn = document.getElementById("open-contents");
   var closeContentsBtn = document.getElementById("close-contents");
   var contentsEl = document.getElementById("contents");
@@ -107,8 +111,9 @@
     var q = new URLSearchParams();
     q.set("p", String(current));
     q.set("view", view);
+    if (workMode) q.set("work", "1");
     var url = location.pathname + "?" + q.toString();
-    var state = { p: current, view: view };
+    var state = { p: current, view: view, work: workMode };
     if (push) history.pushState(state, "", url);
     else history.replaceState(state, "", url);
   }
@@ -245,12 +250,41 @@
     closeContentsBtn.focus();
   }
 
+  function workLabel(rec) {
+    if (!rec) return "";
+    var st = rec.state === "needs-work" ? "needs work" : rec.state;
+    if (rec.note) return st + " · " + rec.note;
+    return st;
+  }
+
+  function updateWorkCue(page) {
+    if (!workCue) return;
+    if (!workMode) {
+      workCue.hidden = true;
+      workCue.textContent = "";
+      farbrengenLine.classList.remove("has-work-cue");
+      return;
+    }
+    var rec = workByN[page.n];
+    var text = workLabel(rec);
+    if (!text) {
+      workCue.hidden = true;
+      workCue.textContent = "";
+      farbrengenLine.classList.remove("has-work-cue");
+      return;
+    }
+    workCue.hidden = false;
+    workCue.textContent = text;
+    farbrengenLine.classList.add("has-work-cue");
+  }
+
   function updateFarbrengenLine(page) {
     var g = groupForPage(page.n);
     var title = "";
     if (g) title = g.title || g.label || "";
     else if (page.sicha) title = page.sicha;
     farbrengenLine.textContent = title;
+    updateWorkCue(page);
   }
 
   function noteableParagraphs(root) {
@@ -884,9 +918,15 @@
       if (e.state && typeof e.state.p === "number") {
         current = clamp(e.state.p);
         view = normalizeView(e.state.view);
+        workMode = !!e.state.work;
         render(false);
       }
     });
+  }
+
+  function wantWork(params) {
+    var v = (params || new URLSearchParams(location.search)).get("work");
+    return v === "1" || v === "true";
   }
 
   function bootFromLocation() {
@@ -900,19 +940,20 @@
     if (vParam) view = normalizeView(vParam);
     else if (stored && stored.view) view = normalizeView(stored.view);
     else view = DEFAULT_VIEW;
+    workMode = wantWork(params);
     if (params.get("download") === "1" || params.get("download") === "pdf") {
       window.setTimeout(function () {
         openDownloadSheet();
         var url = new URL(location.href);
         url.searchParams.delete("download");
-        history.replaceState({ p: current, view: view }, "", url.pathname + url.search);
+        history.replaceState({ p: current, view: view, work: workMode }, "", url.pathname + url.search);
       }, 0);
     }
   }
 
   bind();
 
-  Promise.all([
+  var fetches = [
     fetch(DATA_URL).then(function (res) {
       if (!res.ok) throw new Error("pages.json " + res.status);
       return res.json();
@@ -923,11 +964,24 @@
     }).catch(function () {
       return { front: [], farbrengens: [] };
     })
-  ])
+  ];
+  if (wantWork()) {
+    fetches.push(
+      fetch(WORK_URL).then(function (res) {
+        if (!res.ok) throw new Error("work.json " + res.status);
+        return res.json();
+      }).catch(function () {
+        return { pages: [] };
+      })
+    );
+  }
+
+  Promise.all(fetches)
     .then(function (pair) {
       pages = pair[0];
       toc = pair[1] || { front: [], farbrengens: [] };
       byN = {};
+      workByN = {};
       minN = pages[0].n;
       maxN = pages[0].n;
       var i;
@@ -936,6 +990,10 @@
         byN[p.n] = p;
         if (p.n < minN) minN = p.n;
         if (p.n > maxN) maxN = p.n;
+      }
+      var workPages = pair[2] && pair[2].pages ? pair[2].pages : [];
+      for (i = 0; i < workPages.length; i++) {
+        workByN[workPages[i].n] = workPages[i];
       }
       bootFromLocation();
       render(false);

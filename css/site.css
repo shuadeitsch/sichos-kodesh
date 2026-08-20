@@ -657,6 +657,144 @@ body.note {
 }
 
 /* ------------------------------------------------------------------ */
+/* Work ledger                                                          */
+/* ------------------------------------------------------------------ */
+
+body.work {
+  min-height: 100vh;
+}
+
+.ledger {
+  max-width: 42rem;
+  margin: 0 auto;
+  padding: 2.4rem 1.5rem 4rem;
+}
+
+.ledger h1 {
+  margin: 0 0 0.55rem;
+  font-family: var(--ui);
+  font-weight: 600;
+  font-size: 1.45rem;
+  line-height: 1.2;
+}
+
+.ledger-counts {
+  margin: 0 0 0.35rem;
+  font-size: 0.98rem;
+  color: var(--ink);
+}
+
+.ledger-legend {
+  margin: 0 0 1.7rem;
+  font-size: 0.82rem;
+  color: var(--mute);
+}
+
+.ledger-legend .pg {
+  margin: 0;
+}
+
+.ledger-kicker {
+  margin: 1.35rem 0 0.45rem;
+  font-family: var(--type);
+  font-weight: 400;
+  font-size: 0.82rem;
+  color: var(--mute);
+}
+
+.ledger-group {
+  margin: 0 0 1.15rem;
+}
+
+.ledger-head {
+  margin: 0 0 0.22rem;
+  font-family: var(--sefer);
+  font-weight: 400;
+  font-size: 1.08rem;
+  line-height: 1.35;
+}
+
+.ledger-head.is-front {
+  color: var(--mute);
+  font-size: 0.98rem;
+}
+
+.ledger-pages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.12rem 0.62rem;
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.pg {
+  text-decoration: none;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: var(--ink);
+}
+
+a.pg:hover {
+  text-decoration: none;
+  color: var(--mark);
+}
+
+.pg.is-verified {
+  color: var(--mark);
+}
+
+.pg.is-typed {
+  color: var(--ink);
+}
+
+.pg.is-needs-work {
+  color: var(--ink);
+  border-bottom: 1px dotted var(--ink);
+}
+
+.pg.is-skip {
+  color: var(--rule);
+}
+
+.ledger-notes {
+  margin: 0.28rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--mute);
+}
+
+.ledger-notes li {
+  margin: 0 0 0.18rem;
+}
+
+.ledger-note-pages {
+  color: var(--ink);
+}
+
+/* ------------------------------------------------------------------ */
+/* Reader work cue (?work=1 only)                                       */
+/* ------------------------------------------------------------------ */
+
+.work-cue {
+  margin: 0;
+  width: 100%;
+  padding: 0.14rem 0.9rem 0.28rem;
+  border-bottom: 1px solid var(--ink);
+  background: var(--page);
+  font-family: var(--ui);
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--mute);
+  text-align: center;
+}
+
+.farbrengen-line.has-work-cue {
+  border-bottom-color: var(--rule);
+}
+
+/* ------------------------------------------------------------------ */
 /* Hold-to-note on retype paragraphs                                    */
 /* ------------------------------------------------------------------ */
 
@@ -1100,5 +1238,13 @@ body.note {
 
   .letter {
     padding: 2.4rem 1.15rem 3.5rem;
+  }
+
+  .ledger {
+    padding: 1.8rem 1.15rem 3.5rem;
+  }
+
+  .work-cue {
+    padding-inline: 0.75rem;
   }
 }
