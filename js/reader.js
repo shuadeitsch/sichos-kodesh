@@ -35,6 +35,8 @@
   var retypeBtn = document.getElementById("view-retype");
   var bothBtn = document.getElementById("view-both");
   var farbrengenLine = document.getElementById("farbrengen-line");
+  var farbrengenTitle = document.getElementById("farbrengen-title");
+  var retypeGroupBtn = document.getElementById("retype-group");
   var workCue = document.getElementById("work-cue");
   var openContentsBtn = document.getElementById("open-contents");
   var closeContentsBtn = document.getElementById("close-contents");
@@ -50,6 +52,7 @@
   var sheetText = document.getElementById("sheet-text");
   var sheetSend = document.getElementById("sheet-send");
   var sheetClose = document.getElementById("sheet-close");
+  var openRetypeBtn = document.getElementById("open-retype");
   var openDownloadBtn = document.getElementById("open-download");
   var downloadSheet = document.getElementById("download-sheet");
   var downloadKicker = document.getElementById("download-kicker");
@@ -168,6 +171,16 @@
       if (n >= list[i].start && n <= list[i].end) return list[i];
     }
     return null;
+  }
+
+  function isFarbrengenGroup(g) {
+    if (!g) return false;
+    var list = toc.farbrengens || [];
+    var i;
+    for (i = 0; i < list.length; i++) {
+      if (list[i].id === g.id) return true;
+    }
+    return false;
   }
 
   function printRange(g) {
@@ -347,7 +360,13 @@
     var title = "";
     if (g) title = g.title || g.label || "";
     else if (page.sicha) title = page.sicha;
-    farbrengenLine.textContent = title;
+    if (farbrengenTitle) farbrengenTitle.textContent = title;
+    else farbrengenLine.textContent = title;
+    farbrengenLine.classList.toggle("is-empty", !title);
+    farbrengenLine.classList.toggle("has-retype", isFarbrengenGroup(g));
+    if (retypeGroupBtn) {
+      retypeGroupBtn.hidden = !isFarbrengenGroup(g);
+    }
     updateWorkCue(page);
   }
 
@@ -1603,7 +1622,26 @@
 
     openContentsBtn.addEventListener("click", openContents);
     closeContentsBtn.addEventListener("click", closeContents);
-    farbrengenLine.addEventListener("click", openContents);
+    if (farbrengenTitle) {
+      farbrengenTitle.addEventListener("click", openContents);
+    } else {
+      farbrengenLine.addEventListener("click", openContents);
+    }
+    if (openRetypeBtn) {
+      openRetypeBtn.addEventListener("click", function () {
+        startMachineJob(current, current);
+      });
+    }
+    if (retypeGroupBtn) {
+      retypeGroupBtn.addEventListener("click", function () {
+        var g = groupForPage(current);
+        if (!g) {
+          startMachineJob(current, current);
+          return;
+        }
+        startMachineJob(g.start, g.end);
+      });
+    }
     contentsEl.addEventListener("click", function (e) {
       if (e.target === contentsEl) closeContents();
     });

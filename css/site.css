@@ -698,6 +698,7 @@ body.reader.is-peeking {
 }
 
 .farbrengen-line {
+  position: relative;
   display: block;
   width: 100%;
   min-height: 1.7rem;
@@ -713,12 +714,45 @@ body.reader.is-peeking {
   direction: rtl;
 }
 
-.farbrengen-line:hover {
+.farbrengen-title {
+  display: block;
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  text-align: center;
+  direction: rtl;
+}
+
+.farbrengen-title:hover {
   color: var(--mark);
 }
 
-.farbrengen-line:empty {
+.farbrengen-line.is-empty .farbrengen-title {
   color: transparent;
+}
+
+.farbrengen-line.has-retype .farbrengen-title {
+  padding-inline-end: 3.6rem;
+}
+
+.farbrengen-retype {
+  position: absolute;
+  inset-inline-end: 0.9rem;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1;
+  font-family: var(--ui);
+  font-size: 0.78rem;
+  color: var(--mute);
+  direction: ltr;
+}
+
+.farbrengen-retype:hover {
+  color: var(--ink);
+}
+
+.farbrengen-retype[hidden] {
+  display: none;
 }
 
 /* ------------------------------------------------------------------ */
@@ -1019,6 +1053,14 @@ body.work {
   margin: 0 0 1.15rem;
 }
 
+.ledger-head-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0 0 0.22rem;
+}
+
 .ledger-head {
   margin: 0 0 0.22rem;
   font-family: var(--sefer);
@@ -1027,9 +1069,28 @@ body.work {
   line-height: 1.35;
 }
 
+.ledger-head-row .ledger-head {
+  margin: 0;
+  min-width: 0;
+}
+
 .ledger-head.is-front {
   color: var(--mute);
   font-size: 0.98rem;
+}
+
+.ledger-retype {
+  flex: 0 0 auto;
+  font-family: var(--ui);
+  font-size: 0.82rem;
+  color: var(--mute);
+  padding: 0 0 0.08rem;
+  border-bottom: 1px solid transparent;
+}
+
+.ledger-retype:hover {
+  color: var(--ink);
+  border-bottom-color: var(--ink);
 }
 
 .ledger-pages {
@@ -1406,9 +1467,14 @@ a.pg:hover,
 
 .sheet-actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
-  gap: 1.35rem;
+  gap: 0.85rem 1.35rem;
   margin-top: 1.05rem;
+}
+
+.sheet-actions + .sheet-hint {
+  margin-top: 0.7rem;
 }
 
 .sheet-actions button {
@@ -1632,5 +1698,9 @@ a.pg:hover,
 
   .work-cue {
     padding-inline: 0.75rem;
+  }
+
+  .farbrengen-retype {
+    inset-inline-end: 0.75rem;
   }
 }
