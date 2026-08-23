@@ -27,6 +27,8 @@
   var retypeEl = document.getElementById("rate-retype");
   var saveBtn = document.getElementById("rate-save");
   var readBtn = document.getElementById("rate-read");
+  var retypePageBtn = document.getElementById("rate-retype-page");
+  var retypeGroupBtn = document.getElementById("rate-retype-group");
   var closeBtn = document.getElementById("rate-close");
 
   var seed = [];
@@ -284,7 +286,26 @@
         head.dir = "rtl";
       }
       head.textContent = g.title;
-      section.appendChild(head);
+
+      if (!g.front && g.ns.length) {
+        var row = document.createElement("div");
+        row.className = "ledger-head-row";
+        row.appendChild(head);
+        var retypeBtn = document.createElement("button");
+        retypeBtn.type = "button";
+        retypeBtn.className = "ledger-retype";
+        retypeBtn.textContent = "Retype";
+        retypeBtn.setAttribute("aria-label", "Retype this farbrengen");
+        (function (start, end) {
+          retypeBtn.addEventListener("click", function () {
+            startMachineJob(start, end);
+          });
+        })(g.ns[0], g.ns[g.ns.length - 1]);
+        row.appendChild(retypeBtn);
+        section.appendChild(row);
+      } else {
+        section.appendChild(head);
+      }
 
       var row = document.createElement("p");
       row.className = "ledger-pages";
@@ -396,6 +417,9 @@
     setGradeButtons(gradeOf(rec));
     noteEl.value = noteOf(rec) === "blank" ? "" : noteOf(rec);
     retypeEl.checked = !!rec.retype;
+    if (retypeGroupBtn) {
+      retypeGroupBtn.hidden = !groupForPage(n);
+    }
     sheetEl.hidden = false;
     var active = gradesEl.querySelector(".sheet-choice.is-active");
     if (active) active.focus();
@@ -445,6 +469,21 @@
     window.location.href = "/read/?p=" + n + "&view=both&work=1";
   }
 
+  function retypeThisPage() {
+    if (currentN == null) return;
+    startMachineJob(currentN, currentN);
+  }
+
+  function retypeThisFarbrengen() {
+    if (currentN == null) return;
+    var g = groupForPage(currentN);
+    if (!g) {
+      startMachineJob(currentN, currentN);
+      return;
+    }
+    startMachineJob(g.start, g.end);
+  }
+
   function exportPayload() {
     var pages = [];
     var i;
@@ -487,6 +526,8 @@
     saveBtn.addEventListener("click", saveSheet);
     closeBtn.addEventListener("click", closeSheet);
     readBtn.addEventListener("click", openRead);
+    if (retypePageBtn) retypePageBtn.addEventListener("click", retypeThisPage);
+    if (retypeGroupBtn) retypeGroupBtn.addEventListener("click", retypeThisFarbrengen);
     downloadBtn.addEventListener("click", downloadRatings);
     retypeEl.addEventListener("change", function () {
       var rec = currentN != null ? byN[currentN] : null;
