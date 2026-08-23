@@ -294,8 +294,8 @@
         var retypeBtn = document.createElement("button");
         retypeBtn.type = "button";
         retypeBtn.className = "ledger-retype";
-        retypeBtn.textContent = "Retype";
-        retypeBtn.setAttribute("aria-label", "Retype this farbrengen");
+        retypeBtn.textContent = "Machine";
+        retypeBtn.setAttribute("aria-label", "Machine this farbrengen");
         (function (start, end) {
           retypeBtn.addEventListener("click", function () {
             startMachineJob(start, end);
@@ -447,13 +447,33 @@
     }
   }
 
+  function touchPageButton(n, rec) {
+    var btns = boardEl.querySelectorAll(".pg");
+    var i;
+    for (i = 0; i < btns.length; i++) {
+      if (btns[i].textContent === String(n)) {
+        btns[i].className = "pg grade-" + gradeOf(rec);
+        btns[i].title = titleFor(rec);
+        return true;
+      }
+    }
+    return false;
+  }
+
   function closeSheet() {
     var n = currentN;
+    var rec = n != null ? byN[n] : null;
+    var noteBefore = rec ? noteOf(rec) : "";
     takeNoteFromSheet();
     persist();
     sheetEl.hidden = true;
     currentN = null;
-    paint();
+    if (rec && noteOf(rec) === noteBefore && touchPageButton(n, rec)) {
+      renderCounts(records);
+      renderModels(records);
+    } else {
+      paint();
+    }
     if (n != null) focusPageButton(n);
   }
 
