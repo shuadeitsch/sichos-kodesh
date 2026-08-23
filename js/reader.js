@@ -27,6 +27,10 @@
   var prevBtn = document.getElementById("prev");
   var nextBtn = document.getElementById("next");
   var nextBottom = document.getElementById("next-bottom");
+  var prevBottom = document.getElementById("prev-bottom");
+  var pageInputBottom = document.getElementById("page-input-bottom");
+  var pagerNums = document.getElementById("pager-nums");
+  var pagerPrint = document.getElementById("pager-print");
   var originalBtn = document.getElementById("view-original");
   var retypeBtn = document.getElementById("view-retype");
   var bothBtn = document.getElementById("view-both");
@@ -1068,6 +1072,38 @@
     if (bothInkBtn) bothInkBtn.setAttribute("aria-expanded", "false");
   }
 
+  function fillPager(page) {
+    if (prevBottom) prevBottom.disabled = current <= minN;
+    if (nextBottom) nextBottom.disabled = current >= maxN;
+    if (pageInputBottom) {
+      pageInputBottom.value = String(page.n);
+      pageInputBottom.max = String(maxN);
+    }
+    if (pagerPrint) pagerPrint.textContent = page.print ? page.print : "";
+    if (!pagerNums) return;
+    pagerNums.replaceChildren();
+    var n;
+    for (n = current - 2; n <= current + 2; n++) {
+      if (n < minN || n > maxN) continue;
+      var el;
+      if (n === current) {
+        el = document.createElement("span");
+        el.className = "pager-num is-current";
+      } else {
+        el = document.createElement("button");
+        el.type = "button";
+        el.className = "pager-num";
+        el.addEventListener("click", (function (target) {
+          return function () {
+            go(target, true);
+          };
+        })(n));
+      }
+      el.textContent = String(n);
+      pagerNums.appendChild(el);
+    }
+  }
+
   function render(pushUrl) {
     var page = byN[current] || pages[0];
     if (!page) return;
@@ -1078,7 +1114,7 @@
     printEl.textContent = page.print ? page.print : "";
     prevBtn.disabled = current <= minN;
     nextBtn.disabled = current >= maxN;
-    if (nextBottom) nextBottom.disabled = current >= maxN;
+    fillPager(page);
     setViewButtons();
     updateFarbrengenLine(page);
     document.body.classList.toggle("is-both", view === "both");
@@ -1478,9 +1514,19 @@
     nextBtn.addEventListener("click", function () {
       go(current + 1, true);
     });
+    if (prevBottom) {
+      prevBottom.addEventListener("click", function () {
+        go(current - 1, true);
+      });
+    }
     if (nextBottom) {
       nextBottom.addEventListener("click", function () {
         go(current + 1, true);
+      });
+    }
+    if (pageInputBottom) {
+      pageInputBottom.addEventListener("change", function () {
+        go(pageInputBottom.value, true);
       });
     }
     originalBtn.addEventListener("click", function () {

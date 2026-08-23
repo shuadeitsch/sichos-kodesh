@@ -41,7 +41,20 @@
   </main>
 
   <footer class="page-end">
-    <button type="button" class="page-end-next" id="next-bottom">Next page</button>
+    <nav class="pager" aria-label="Pages">
+      <div class="pager-turns">
+        <button type="button" class="pager-turn" id="prev-bottom">Previous</button>
+        <button type="button" class="pager-turn" id="next-bottom">Next</button>
+      </div>
+      <div class="pager-folio">
+        <div class="pager-nums" id="pager-nums"></div>
+        <div class="pager-jump">
+          <span class="pager-jump-lbl">page</span>
+          <input id="page-input-bottom" type="number" min="1" inputmode="numeric" aria-label="Go to page">
+          <span class="pager-print" id="pager-print" lang="he"></span>
+        </div>
+      </div>
+    </nav>
     <p class="colophon-line" lang="he">הנחה בלתי מוגה</p>
   </footer>
 
