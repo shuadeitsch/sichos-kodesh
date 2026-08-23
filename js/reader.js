@@ -404,8 +404,8 @@
     var title = "";
     if (g) title = g.title || g.label || "";
     else if (page.sicha) title = page.sicha;
-    if (farbrengenTitle) farbrengenTitle.textContent = title;
-    else farbrengenLine.textContent = title;
+    if (farbrengenTitle) farbrengenTitle.textContent = title || "\u00a0";
+    else farbrengenLine.textContent = title || "\u00a0";
     farbrengenLine.classList.toggle("is-empty", !title);
     farbrengenLine.classList.toggle("has-retype", isFarbrengenGroup(g));
     if (retypeGroupBtn) {
