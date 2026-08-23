@@ -26,6 +26,7 @@
   var printEl = document.getElementById("bar-print");
   var prevBtn = document.getElementById("prev");
   var nextBtn = document.getElementById("next");
+  var nextBottom = document.getElementById("next-bottom");
   var originalBtn = document.getElementById("view-original");
   var retypeBtn = document.getElementById("view-retype");
   var bothBtn = document.getElementById("view-both");
@@ -1077,6 +1078,7 @@
     printEl.textContent = page.print ? page.print : "";
     prevBtn.disabled = current <= minN;
     nextBtn.disabled = current >= maxN;
+    if (nextBottom) nextBottom.disabled = current >= maxN;
     setViewButtons();
     updateFarbrengenLine(page);
     document.body.classList.toggle("is-both", view === "both");
@@ -1120,6 +1122,7 @@
     if (next === current && push) return;
     current = next;
     render(!!push);
+    window.scrollTo(0, 0);
   }
 
   function jumpFarbrengen(dir) {
@@ -1475,6 +1478,11 @@
     nextBtn.addEventListener("click", function () {
       go(current + 1, true);
     });
+    if (nextBottom) {
+      nextBottom.addEventListener("click", function () {
+        go(current + 1, true);
+      });
+    }
     originalBtn.addEventListener("click", function () {
       if (view === "original") return;
       view = "original";
