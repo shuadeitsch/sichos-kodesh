@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#FBF8F2">
   <meta name="description" content="Read Sichos Kodesh volume 1 — original print or retype.">
   <title>שיחות קודש · reader</title>
+  <link rel="preload" href="/fonts/MiriamLibre-Static-Regular.ttf" as="font" type="font/ttf" crossorigin>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;700&amp;family=Source+Sans+3:wght@400;600&amp;display=swap" rel="stylesheet">
@@ -30,17 +31,45 @@
         <button type="button" class="step" id="next" aria-label="Next page">›</button>
         <button type="button" class="bar-ctl bar-note-ctl" id="open-download">Download</button>
         <button type="button" class="bar-ctl bar-note-ctl" id="open-note">Note</button>
-        <button type="button" class="bar-ctl bar-note-ctl" id="open-retype" aria-label="Retype this page">Retype</button>
+        <button type="button" class="bar-ctl bar-note-ctl" id="open-retype" aria-label="Machine this page">Machine</button>
       </div>
     </div>
     <div class="farbrengen-line" id="farbrengen-line">
       <button type="button" class="farbrengen-title" id="farbrengen-title" lang="he" aria-controls="contents"></button>
-      <button type="button" class="farbrengen-retype" id="retype-group" hidden aria-label="Retype this farbrengen">Retype</button>
+      <button type="button" class="farbrengen-retype" id="retype-group" hidden aria-label="Machine this farbrengen">Machine</button>
     </div>
     <p class="work-cue" id="work-cue" hidden></p>
   </header>
 
   <main id="stage" class="stage" lang="he">
+    <div class="stage-frame" id="stage-frame">
+      <div class="scan-stage" id="scan-stage">
+        <img id="stage-scan" width="1366" height="1760" alt="" decoding="async">
+      </div>
+      <div class="both" id="both-view">
+        <button type="button" class="both-ink" id="both-ink" aria-expanded="false" aria-controls="both-peek" aria-label="Original ink for the paragraph in view. Tap to enlarge.">
+          <canvas class="both-ink-canvas" id="both-canvas" width="1366" height="1760" aria-hidden="true"></canvas>
+        </button>
+        <div class="both-leaf" id="both-leaf">
+          <article class="leaf leaf--body is-skeleton" id="leaf" lang="he" dir="rtl" aria-hidden="true">
+            <span class="leaf-print" id="leaf-print"></span>
+            <span class="leaf-draft" id="leaf-draft" lang="en" hidden>draft</span>
+            <div class="leaf-stamp" id="leaf-stamp">הנחה בלתי מוגה</div>
+            <div class="leaf-body" id="leaf-body">
+              <p class="skel-line"></p>
+              <p class="skel-line"></p>
+              <p class="skel-line"></p>
+              <p class="skel-line"></p>
+              <p class="skel-line"></p>
+              <p class="skel-line"></p>
+              <p class="skel-line"></p>
+              <p class="skel-line"></p>
+            </div>
+          </article>
+          <p class="quiet" id="leaf-quiet" lang="en" hidden>No retype for this page.</p>
+        </div>
+      </div>
+    </div>
     <noscript><p class="noscript">This reader needs JavaScript to turn the pages.</p></noscript>
   </main>
 
@@ -61,8 +90,36 @@
     </nav>
     <p class="colophon-line" lang="he">הנחה בלתי מוגה</p>
   </footer>
+  <script>
+    (function () {
+      var q = new URLSearchParams(location.search);
+      var v = q.get("view");
+      if (v === "original") document.body.classList.add("is-original");
+      if (v === "both") document.body.classList.add("is-both");
+      var p = q.get("p");
+      if (!p) return;
+      var a = document.getElementById("page-input");
+      var b = document.getElementById("page-input-bottom");
+      if (a) a.value = p;
+      if (b) b.value = p;
+      var box = document.getElementById("pager-nums");
+      if (!box || box.childElementCount) return;
+      var n = parseInt(p, 10);
+      if (!n) return;
+      var i;
+      for (i = n - 2; i <= n + 2; i++) {
+        if (i < 1) continue;
+        var el = document.createElement(i === n ? "span" : "button");
+        if (i !== n) el.type = "button";
+        el.className = i === n ? "pager-num is-current" : "pager-num";
+        el.setAttribute("data-n", String(i));
+        el.textContent = String(i);
+        box.appendChild(el);
+      }
+    })();
+  </script>
 
-  <div class="contents" id="contents" hidden>
+  <div class="contents" id="contents" hidden inert>
     <div class="contents-panel" role="dialog" aria-modal="true" aria-labelledby="contents-title">
       <div class="contents-head">
         <h2 id="contents-title" lang="he">מפתח</h2>
@@ -72,19 +129,19 @@
     </div>
   </div>
 
-  <div class="both-peek" id="both-peek" hidden>
+  <div class="both-peek" id="both-peek" hidden inert>
     <button type="button" class="both-peek-close" id="both-peek-close">Close</button>
-    <img id="both-peek-scan" alt="Original ink" draggable="false">
+    <img id="both-peek-scan" width="1366" height="1760" alt="Original ink" draggable="false">
   </div>
 
-  <div class="sheet" id="note-sheet" hidden>
+  <div class="sheet" id="note-sheet" hidden inert>
     <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="sheet-heading">
       <p class="sheet-kicker" id="sheet-kicker"></p>
       <h2 id="sheet-heading" class="sheet-heading">Note</h2>
       <p class="sheet-quote" id="sheet-quote" lang="he" dir="rtl" hidden></p>
       <div class="sheet-ink" id="sheet-ink" hidden>
         <canvas id="sheet-canvas" hidden></canvas>
-        <img id="sheet-scan" alt="Original ink" hidden>
+        <img id="sheet-scan" width="1366" height="1760" alt="Original ink" hidden>
       </div>
       <label class="sheet-label" for="sheet-text">The note</label>
       <textarea id="sheet-text" rows="6"></textarea>
@@ -95,7 +152,7 @@
     </div>
   </div>
 
-  <div class="sheet" id="download-sheet" hidden>
+  <div class="sheet" id="download-sheet" hidden inert>
     <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="download-heading">
       <p class="sheet-kicker" id="download-kicker"></p>
       <h2 id="download-heading" class="sheet-heading">Download</h2>

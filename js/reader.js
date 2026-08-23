@@ -10,6 +10,10 @@
   var HOLD_MS = 520;
   var MOVE_PX = 8;
   var MAIL = "sichos@agentmail.to";
+  var SCAN_W = 1366;
+  var SCAN_H = 1760;
+  var TURN_SWAP_MS = 80;
+  var BOTH_RESIZE_MS = 150;
 
   var pages = [];
   var byN = {};
@@ -79,15 +83,34 @@
   var bothPeek = document.getElementById("both-peek");
   var bothPeekScan = document.getElementById("both-peek-scan");
   var bothPeekClose = document.getElementById("both-peek-close");
-  var bothInkBtn = null;
-  var bothCanvas = null;
+  var stageFrame = document.getElementById("stage-frame");
+  var scanStage = document.getElementById("scan-stage");
+  var scanImg = document.getElementById("stage-scan");
+  var leafEl = document.getElementById("leaf");
+  var leafBody = document.getElementById("leaf-body");
+  var leafPrint = document.getElementById("leaf-print");
+  var leafDraft = document.getElementById("leaf-draft");
+  var leafStamp = document.getElementById("leaf-stamp");
+  var quietEl = document.getElementById("leaf-quiet");
+  var bothInkBtn = document.getElementById("both-ink");
+  var bothCanvas = document.getElementById("both-canvas");
   var bothScanImg = null;
+  var bothScanBmp = null;
   var bothParas = [];
   var bothIndex = -1;
+  var bothPageN = 0;
   var bothObserver = null;
   var bothRaf = 0;
+  var bothResizeTimer = 0;
   var peekZoom = null;
   var inkZoom = null;
+  var renderedN = 0;
+  var renderedView = "";
+  var turnTimer = 0;
+  var turnGen = 0;
+  var scanCache = {};
+  var contentsBuilt = false;
+  var chromeObserver = null;
   var ZOOM_MIN = 1;
   var ZOOM_MAX = 5;
   var ZOOM_TOGGLE = 2.5;
@@ -196,7 +219,10 @@
   }
 
   function setOverlay(el, open) {
+    if (!el) return;
     el.hidden = !open;
+    el.setAttribute("aria-hidden", open ? "false" : "true");
+    if ("inert" in el) el.inert = !open;
   }
 
   function closeContents() {
@@ -240,7 +266,22 @@
     closeBothPeek();
   }
 
+  function markContentsCurrent() {
+    if (!contentsList) return;
+    var btns = contentsList.querySelectorAll(".toc-entry");
+    var i;
+    for (i = 0; i < btns.length; i++) {
+      var start = parseInt(btns[i].getAttribute("data-start"), 10);
+      var end = parseInt(btns[i].getAttribute("data-end"), 10);
+      btns[i].classList.toggle("is-current", current >= start && current <= end);
+    }
+  }
+
   function fillContents() {
+    if (contentsBuilt) {
+      markContentsCurrent();
+      return;
+    }
     contentsList.replaceChildren();
     function addKicker(text) {
       var h = document.createElement("h3");
@@ -254,6 +295,8 @@
       btn.type = "button";
       btn.className = quiet ? "toc-entry is-front" : "toc-entry";
       btn.lang = "he";
+      btn.setAttribute("data-start", String(g.start));
+      btn.setAttribute("data-end", String(g.end));
       if (current >= g.start && current <= g.end) btn.classList.add("is-current");
       var name = document.createElement("span");
       name.className = "toc-name";
@@ -277,6 +320,7 @@
     (toc.farbrengens || []).forEach(function (g) {
       addEntry(g, false);
     });
+    contentsBuilt = true;
   }
 
   function openContents() {
@@ -385,97 +429,105 @@
     return paras;
   }
 
-  function makeScanImage(page) {
-    var img = document.createElement("img");
-    img.src = "/" + page.scan;
-    img.alt = "Sichos Kodesh vol. 1, page " + page.n;
+  function scanUrl(page) {
+    return "/" + page.scan;
+  }
+
+  function decorateScan(img, priority) {
+    if (!img) return;
+    img.width = SCAN_W;
+    img.height = SCAN_H;
+    img.setAttribute("width", String(SCAN_W));
+    img.setAttribute("height", String(SCAN_H));
     img.decoding = "async";
-    return img;
+    if (priority) img.fetchPriority = "high";
+    else if (img.fetchPriority) img.fetchPriority = "auto";
   }
 
-  function makeScanStage(page) {
-    var wrap = document.createElement("div");
-    wrap.className = "scan-stage";
-    wrap.appendChild(makeScanImage(page));
-    return wrap;
+  function prepareScan(src) {
+    var hit = scanCache[src];
+    if (hit && hit.ready) return Promise.resolve(hit.img);
+    if (hit && hit.promise) return hit.promise;
+    var img = new Image();
+    img.width = SCAN_W;
+    img.height = SCAN_H;
+    img.decoding = "async";
+    img.src = src;
+    var entry = { img: img, ready: false, promise: null };
+    entry.promise = (img.decode ? img.decode() : Promise.resolve())
+      .catch(function () {})
+      .then(function () {
+        entry.ready = true;
+        return img;
+      });
+    scanCache[src] = entry;
+    return entry.promise;
   }
 
-  function makeQuiet() {
-    var quiet = document.createElement("p");
-    quiet.className = "quiet";
-    quiet.lang = "en";
-    quiet.textContent = "No retype for this page.";
-    return quiet;
+  function swapScan(el, page, priority) {
+    if (!el || !page) return;
+    decorateScan(el, priority);
+    el.alt = "Sichos Kodesh vol. 1, page " + page.n;
+    var src = scanUrl(page);
+    el.setAttribute("data-n", String(page.n));
+    prepareScan(src).then(function () {
+      if (el.getAttribute("data-n") !== String(page.n)) return;
+      if (el.getAttribute("src") === src) return;
+      el.src = src;
+    });
   }
 
-  function makeLeaf(page) {
-    var article = document.createElement("article");
-    article.className = "leaf leaf--" + page.type;
-    article.lang = "he";
-    article.dir = "rtl";
-
-    if (page.print) {
-      var folio = document.createElement("span");
-      folio.className = "leaf-print";
-      folio.textContent = page.print;
-      article.appendChild(folio);
+  function fillLeaf(page) {
+    if (!leafEl || !leafBody) return;
+    var ok = hasRetype(page);
+    if (quietEl) quietEl.hidden = ok;
+    leafEl.hidden = !ok;
+    if (!ok) {
+      leafEl.classList.remove("is-skeleton");
+      leafEl.removeAttribute("aria-hidden");
+      return;
     }
-
-    if (page.status === "draft") {
-      var draft = document.createElement("span");
-      draft.className = "leaf-draft";
-      draft.lang = "en";
-      draft.textContent = "draft";
-      article.appendChild(draft);
+    if (leafBody.getAttribute("data-n") === String(page.n) && !leafEl.classList.contains("is-skeleton")) {
+      return;
     }
-
-    if (page.type === "body") {
-      var stamp = document.createElement("div");
-      stamp.className = "leaf-stamp";
-      stamp.textContent = "הנחה בלתי מוגה";
-      article.appendChild(stamp);
-    }
-
-    var body = document.createElement("div");
-    body.className = "leaf-body";
-    body.innerHTML = page.html;
-    article.appendChild(body);
-    prepareParagraphs(article);
-    return article;
+    leafEl.className = "leaf leaf--" + page.type;
+    leafEl.lang = "he";
+    leafEl.dir = "rtl";
+    leafEl.removeAttribute("aria-hidden");
+    if (leafPrint) leafPrint.textContent = page.print || "";
+    if (leafDraft) leafDraft.hidden = page.status !== "draft";
+    if (leafStamp) leafStamp.hidden = page.type !== "body";
+    leafBody.innerHTML = page.html;
+    leafBody.setAttribute("data-n", String(page.n));
+    prepareParagraphs(leafEl);
   }
 
-  function makeRetypePane(page) {
-    if (!hasRetype(page)) return makeQuiet();
-    return makeLeaf(page);
+  function applyViewClasses() {
+    document.body.classList.toggle("is-both", view === "both");
+    document.body.classList.toggle("is-original", view === "original");
   }
 
-  function makeBoth(page) {
-    var wrap = document.createElement("div");
-    wrap.className = "both";
-
-    var ink = document.createElement("button");
-    ink.type = "button";
-    ink.className = "both-ink";
-    ink.setAttribute("aria-expanded", "false");
-    ink.setAttribute("aria-controls", "both-peek");
-    ink.setAttribute("aria-label", "Original ink for the paragraph in view. Tap to enlarge.");
-    var canvas = document.createElement("canvas");
-    canvas.className = "both-ink-canvas";
-    canvas.setAttribute("aria-hidden", "true");
-    ink.appendChild(canvas);
-    wrap.appendChild(ink);
-
-    var main = document.createElement("div");
-    main.className = "both-leaf";
-    main.appendChild(makeRetypePane(page));
-    wrap.appendChild(main);
-    return wrap;
+  function fillPageContent(page) {
+    fillLeaf(page);
+    swapScan(scanImg, page, view === "original");
   }
 
   function syncChromeHeight() {
     var chrome = document.querySelector(".chrome");
     if (!chrome) return;
     document.documentElement.style.setProperty("--chrome-h", chrome.offsetHeight + "px");
+  }
+
+  function watchChrome() {
+    var chrome = document.querySelector(".chrome");
+    if (!chrome) return;
+    syncChromeHeight();
+    if (typeof ResizeObserver !== "function") return;
+    if (chromeObserver) chromeObserver.disconnect();
+    chromeObserver = new ResizeObserver(function () {
+      syncChromeHeight();
+    });
+    chromeObserver.observe(chrome);
   }
 
   function paintScanBand(img, canvas, index, count) {
@@ -495,17 +547,61 @@
     ctx.drawImage(img, 0, sy, w, sh, 0, 0, w, Math.round(sh));
   }
 
+  function followSrc() {
+    return bothScanBmp || bothScanImg;
+  }
+
+  function srcSize(img) {
+    if (!img) return { w: 0, h: 0 };
+    if (img.width && img.height) return { w: img.width, h: img.height };
+    return { w: img.naturalWidth || 0, h: img.naturalHeight || 0 };
+  }
+
+  function ensureCanvasBox(canvas, boxW, boxH) {
+    var dpr = window.devicePixelRatio || 1;
+    var cssW = boxW > 0 ? boxW : canvas.clientWidth || 320;
+    var cssH = boxH > 0 ? boxH : canvas.clientHeight || Math.round(cssW * SCAN_H / SCAN_W);
+    var w = Math.max(1, Math.round(cssW * dpr));
+    var h = Math.max(1, Math.round(cssH * dpr));
+    if (w > 1800) {
+      h = Math.max(1, Math.round((h * 1800) / w));
+      w = 1800;
+    }
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width = w;
+      canvas.height = h;
+    }
+    return { w: canvas.width, h: canvas.height };
+  }
+
+  function drawContained(ctx, img, sx, sy, sw, sh, dw, dh) {
+    var scale = Math.min(dw / sw, dh / sh);
+    var tw = sw * scale;
+    var th = sh * scale;
+    var dx = (dw - tw) / 2;
+    var dy = (dh - th) / 2;
+    ctx.clearRect(0, 0, dw, dh);
+    ctx.drawImage(img, sx, sy, sw, sh, dx, dy, tw, th);
+  }
+
   function paintFullScan(img, canvas) {
-    if (!img || !canvas || !img.naturalWidth) return;
-    canvas.width = img.naturalWidth;
-    canvas.height = img.naturalHeight;
-    canvas.getContext("2d").drawImage(img, 0, 0);
+    if (!img || !canvas) return;
+    var src = srcSize(img);
+    if (!src.w) return;
+    var box = ensureCanvasBox(
+      canvas,
+      bothInkBtn ? bothInkBtn.clientWidth : 0,
+      bothInkBtn ? bothInkBtn.clientHeight : 0
+    );
+    drawContained(canvas.getContext("2d"), img, 0, 0, src.w, src.h, box.w, box.h);
   }
 
   function paintFollowLens(img, canvas, index, count, boxW, boxH) {
-    if (!img || !canvas || !img.naturalWidth) return;
-    var w = img.naturalWidth;
-    var h = img.naturalHeight;
+    if (!img || !canvas) return;
+    var src = srcSize(img);
+    if (!src.w) return;
+    var w = src.w;
+    var h = src.h;
     var topSkip = h * 0.08;
     var usable = Math.max(1, h - topSkip - h * 0.08);
     var n = Math.max(count, 1);
@@ -515,8 +611,9 @@
     if (bandSy + bandSh > h) bandSh = h - bandSy;
     var sy = bandSy;
     var sh = bandSh;
-    if (boxW > 0 && boxH > 0) {
-      var need = w * (boxH / boxW);
+    var box = ensureCanvasBox(canvas, boxW, boxH);
+    if (box.w > 0 && box.h > 0) {
+      var need = w * (box.h / box.w);
       if (need > sh) {
         var mid = bandSy + bandSh / 2;
         sh = Math.min(h, need);
@@ -525,23 +622,21 @@
         if (sy + sh > h) sy = h - sh;
       }
     }
-    canvas.width = w;
-    canvas.height = Math.round(sh);
-    var ctx = canvas.getContext("2d");
-    ctx.drawImage(img, 0, sy, w, sh, 0, 0, w, Math.round(sh));
+    drawContained(canvas.getContext("2d"), img, 0, sy, w, sh, box.w, box.h);
   }
 
   function paintCurrentBand() {
-    if (!bothScanImg || !bothCanvas) return;
+    var src = followSrc();
+    if (!src || !bothCanvas) return;
     if (!bothParas.length) {
-      paintFullScan(bothScanImg, bothCanvas);
+      paintFullScan(src, bothCanvas);
       return;
     }
     var index = bothIndex < 0 ? 0 : bothIndex;
     var boxW = bothInkBtn ? bothInkBtn.clientWidth : 0;
     var boxH = bothInkBtn ? bothInkBtn.clientHeight : 0;
     paintFollowLens(
-      bothScanImg,
+      src,
       bothCanvas,
       index,
       bothParas.length,
@@ -577,12 +672,11 @@
   function showBothBand(index) {
     if (index === bothIndex && bothCanvas && bothCanvas.width) return;
     bothIndex = index;
-    if (inkZoom) inkZoom.reset();
     paintCurrentBand();
   }
 
   function pickBothPara() {
-    if (!bothParas.length || !bothScanImg || !bothCanvas) return;
+    if (!bothParas.length || !followSrc() || !bothCanvas) return;
     var y = bothReadingLine();
     var i;
     var best = 0;
@@ -639,44 +733,37 @@
       window.cancelAnimationFrame(bothRaf);
       bothRaf = 0;
     }
-    if (inkZoom) {
-      inkZoom.destroy();
-      inkZoom = null;
-    }
+    if (inkZoom) inkZoom.reset();
     closeBothPeek();
-    bothInkBtn = null;
-    bothCanvas = null;
-    bothScanImg = null;
-    bothParas = [];
     bothIndex = -1;
   }
 
+  function setFollowSource(img) {
+    bothScanImg = img;
+    if (typeof createImageBitmap !== "function") return Promise.resolve(img);
+    return createImageBitmap(img)
+      .then(function (bmp) {
+        if (bothScanImg !== img) {
+          if (bmp.close) bmp.close();
+          return img;
+        }
+        if (bothScanBmp && bothScanBmp.close) bothScanBmp.close();
+        bothScanBmp = bmp;
+        return bmp;
+      })
+      .catch(function () {
+        return img;
+      });
+  }
+
   function startBothFollow(page) {
-    bothInkBtn = stage.querySelector(".both-ink");
-    bothCanvas = stage.querySelector(".both-ink-canvas");
-    var leaf = stage.querySelector(".leaf");
-    bothParas = leaf ? noteableParagraphs(leaf) : [];
-    bothIndex = -1;
-    bothScanImg = null;
+    bothInkBtn = document.getElementById("both-ink") || bothInkBtn;
+    bothCanvas = document.getElementById("both-canvas") || bothCanvas;
+    var leaf = leafEl || stage.querySelector(".leaf");
+    bothParas = leaf && !leaf.hidden ? noteableParagraphs(leaf) : [];
     syncChromeHeight();
 
-    var img = new Image();
-    img.onload = function () {
-      if (view !== "both" || current !== page.n) return;
-      bothScanImg = img;
-      if (!bothParas.length) {
-        paintFullScan(img, bothCanvas);
-        return;
-      }
-      bothIndex = -1;
-      startBothObserver();
-      pickBothPara();
-    };
-    img.onerror = function () {
-      if (view !== "both" || current !== page.n) return;
-      if (bothInkBtn) bothInkBtn.hidden = true;
-    };
-    if (bothInkBtn && bothCanvas) {
+    if (!inkZoom && bothInkBtn && bothCanvas) {
       inkZoom = attachPanZoom({
         surface: bothInkBtn,
         target: bothCanvas,
@@ -687,7 +774,36 @@
         zoomedClass: "is-zoomed"
       });
     }
-    img.src = "/" + page.scan;
+
+    if (bothPageN === page.n && followSrc()) {
+      startBothObserver();
+      pickBothPara();
+      return;
+    }
+
+    bothPageN = page.n;
+    bothIndex = -1;
+    bothScanImg = null;
+    if (bothScanBmp && bothScanBmp.close) {
+      bothScanBmp.close();
+      bothScanBmp = null;
+    }
+
+    prepareScan(scanUrl(page))
+      .then(function (img) {
+        if (view !== "both" || current !== page.n) return null;
+        return setFollowSource(img);
+      })
+      .then(function (src) {
+        if (!src || view !== "both" || current !== page.n) return;
+        if (!bothParas.length) {
+          paintFullScan(src, bothCanvas);
+          return;
+        }
+        startBothObserver();
+        pickBothPara();
+      })
+      .catch(function () {});
   }
 
   function dist2(x1, y1, x2, y2) {
@@ -1070,8 +1186,8 @@
     closeDownload();
     closeNote();
     if (peekZoom) peekZoom.reset();
-    bothPeekScan.src = "/" + page.scan;
     bothPeekScan.alt = "Original page " + page.n;
+    swapScan(bothPeekScan, page, true);
     document.body.classList.add("is-peeking");
     setOverlay(bothPeek, true);
     if (bothInkBtn) bothInkBtn.setAttribute("aria-expanded", "true");
@@ -1087,7 +1203,6 @@
     setOverlay(bothPeek, false);
     document.body.classList.remove("is-peeking");
     if (peekZoom) peekZoom.reset();
-    bothPeekScan.removeAttribute("src");
     if (bothInkBtn) bothInkBtn.setAttribute("aria-expanded", "false");
   }
 
@@ -1100,34 +1215,39 @@
     }
     if (pagerPrint) pagerPrint.textContent = page.print ? page.print : "";
     if (!pagerNums) return;
-    pagerNums.replaceChildren();
+    var wanted = [];
     var n;
     for (n = current - 2; n <= current + 2; n++) {
-      if (n < minN || n > maxN) continue;
-      var el;
-      if (n === current) {
-        el = document.createElement("span");
-        el.className = "pager-num is-current";
-      } else {
-        el = document.createElement("button");
-        el.type = "button";
-        el.className = "pager-num";
-        el.addEventListener("click", (function (target) {
-          return function () {
-            go(target, true);
-          };
-        })(n));
+      if (n >= minN && n <= maxN) wanted.push(n);
+    }
+    while (pagerNums.children.length < wanted.length) {
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "pager-num";
+      pagerNums.appendChild(btn);
+    }
+    while (pagerNums.children.length > wanted.length) {
+      pagerNums.removeChild(pagerNums.lastChild);
+    }
+    var i;
+    for (i = 0; i < wanted.length; i++) {
+      var node = pagerNums.children[i];
+      if (node.getAttribute("data-n") !== String(wanted[i])) {
+        node.setAttribute("data-n", String(wanted[i]));
+        node.textContent = String(wanted[i]);
       }
-      el.textContent = String(n);
-      pagerNums.appendChild(el);
+      var on = wanted[i] === current;
+      node.classList.toggle("is-current", on);
+      node.setAttribute("aria-current", on ? "page" : "false");
     }
   }
 
-  function render(pushUrl) {
-    var page = byN[current] || pages[0];
-    if (!page) return;
-    current = page.n;
+  function reduceMotion() {
+    return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  }
 
+  function renderChrome(page, pushUrl) {
+    current = page.n;
     pageInput.value = String(page.n);
     pageInput.max = String(maxN);
     printEl.textContent = page.print ? page.print : "";
@@ -1136,48 +1256,95 @@
     fillPager(page);
     setViewButtons();
     updateFarbrengenLine(page);
-    document.body.classList.toggle("is-both", view === "both");
-    stopBothFollow();
-
+    applyViewClasses();
     var titleBits = ["שיחות קודש", "page " + page.n];
     if (page.print) titleBits.push(page.print);
     document.title = titleBits.join(" · ");
-
-    stage.replaceChildren();
-
-    if (view === "original") {
-      stage.appendChild(makeScanStage(page));
-      preloadNeighbor(current + 1);
-      preloadNeighbor(current - 1);
-    } else if (view === "both") {
-      stage.appendChild(makeBoth(page));
-      startBothFollow(page);
-      preloadNeighbor(current + 1);
-      preloadNeighbor(current - 1);
-    } else if (!hasRetype(page)) {
-      stage.appendChild(makeQuiet());
-    } else {
-      stage.appendChild(makeLeaf(page));
-    }
-
     persist();
     syncUrl(pushUrl);
     if (!contentsEl.hidden) fillContents();
   }
 
+  function afterPageShown(page) {
+    if (view === "both") startBothFollow(page);
+    preloadNeighbor(current + 1);
+    preloadNeighbor(current - 1);
+    renderedN = page.n;
+    renderedView = view;
+  }
+
+  function applyPageNow(page) {
+    if (stageFrame) {
+      stageFrame.classList.remove("is-turning-next", "is-turning-prev");
+    }
+    fillPageContent(page);
+    window.scrollTo(0, 0);
+  }
+
+  function render(pushUrl, turnDir) {
+    var page = byN[current] || pages[0];
+    if (!page) return;
+    current = page.n;
+
+    var pageChanged = renderedN !== 0 && page.n !== renderedN;
+    var prevView = renderedView;
+
+    if (prevView === "both" && view !== "both") {
+      stopBothFollow();
+    }
+
+    renderChrome(page, pushUrl);
+
+    if (!renderedN) {
+      applyPageNow(page);
+      afterPageShown(page);
+      return;
+    }
+
+    if (!pageChanged) {
+      if (view === "original") swapScan(scanImg, page, true);
+      if (view === "both" && prevView !== "both") startBothFollow(page);
+      renderedView = view;
+      return;
+    }
+
+    if (turnDir == null) turnDir = 0;
+    if (!stageFrame || reduceMotion() || !turnDir) {
+      applyPageNow(page);
+      afterPageShown(page);
+      return;
+    }
+
+    turnGen += 1;
+    var gen = turnGen;
+    if (turnTimer) {
+      window.clearTimeout(turnTimer);
+      turnTimer = 0;
+    }
+    stageFrame.classList.remove("is-turning-next", "is-turning-prev");
+    void stageFrame.offsetWidth;
+    stageFrame.classList.add(turnDir > 0 ? "is-turning-next" : "is-turning-prev");
+    turnTimer = window.setTimeout(function () {
+      turnTimer = 0;
+      if (gen !== turnGen) return;
+      fillPageContent(page);
+      window.scrollTo(0, 0);
+      afterPageShown(page);
+    }, TURN_SWAP_MS);
+  }
+
   function preloadNeighbor(n) {
     var p = byN[n];
     if (!p) return;
-    var img = new Image();
-    img.src = "/" + p.scan;
+    prepareScan(scanUrl(p));
   }
 
   function go(n, push) {
     var next = clamp(n);
     if (next === current && push) return;
+    var dir = next > current ? 1 : next < current ? -1 : 0;
     current = next;
-    render(!!push);
-    window.scrollTo(0, 0);
+    render(!!push, dir);
   }
 
   function jumpFarbrengen(dir) {
@@ -1227,8 +1394,8 @@
   function showFullScan(page) {
     sheetCanvas.hidden = true;
     sheetScan.hidden = false;
-    sheetScan.src = "/" + page.scan;
     sheetScan.alt = "Original page " + page.n;
+    swapScan(sheetScan, page, true);
     sheetInk.hidden = false;
   }
 
@@ -1602,13 +1769,29 @@
       { passive: true }
     );
     window.addEventListener("resize", function () {
-      syncChromeHeight();
       if (view !== "both") return;
-      if (inkZoom) inkZoom.reset();
-      startBothObserver();
-      paintCurrentBand();
-      scheduleBothPick();
+      window.clearTimeout(bothResizeTimer);
+      bothResizeTimer = window.setTimeout(function () {
+        bothResizeTimer = 0;
+        startBothObserver();
+        paintCurrentBand();
+        scheduleBothPick();
+      }, BOTH_RESIZE_MS);
     });
+    if (pagerNums) {
+      pagerNums.addEventListener("click", function (e) {
+        var t = e.target && e.target.closest ? e.target.closest(".pager-num") : null;
+        if (!t || t.classList.contains("is-current")) return;
+        var n = parseInt(t.getAttribute("data-n") || t.textContent, 10);
+        if (Number.isFinite(n)) go(n, true);
+      });
+    }
+    if (stageFrame) {
+      stageFrame.addEventListener("animationend", function (e) {
+        if (e.target !== stageFrame) return;
+        stageFrame.classList.remove("is-turning-next", "is-turning-prev");
+      });
+    }
     pageInput.addEventListener("change", function () {
       go(pageInput.value, true);
     });
@@ -1818,6 +2001,10 @@
     }
   }
 
+  decorateScan(scanImg, false);
+  decorateScan(bothPeekScan, false);
+  decorateScan(sheetScan, false);
+  watchChrome();
   bind();
 
   var fetches = [
@@ -1870,6 +2057,7 @@
       var quiet = document.createElement("p");
       quiet.className = "quiet";
       quiet.textContent = "The pages could not be loaded.";
-      stage.replaceChildren(quiet);
+      if (stageFrame) stageFrame.replaceChildren(quiet);
+      else stage.replaceChildren(quiet);
     });
 })();
